@@ -1,0 +1,23 @@
+{
+  "name": "strength-workout-program",
+  "version": "1.0.0",
+  "description": "A comprehensive workout tracking application with strength programming, analytics, and mobility routines",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "fitness",
+    "workout",
+    "strength",
+    "tracker",
+    "mma",
+    "athletics"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}
