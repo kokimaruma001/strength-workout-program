@@ -15,15 +15,23 @@ let state = {
 function initState() {
   state.workoutLog = getWorkoutLog();
   state.mobilityLog = getMobilityLog();
+  state.selectedDays = getSelectedDays();
+  state.schedule = getSchedule();
+  state.mode = getMode();
+  
+  // If user has a saved schedule, skip setup screen
+  if (Object.keys(state.schedule).length > 0) {
+    state.screen = 'tracker';
+    state.activeDay = state.selectedDays[0] || Object.keys(state.schedule)[0];
+  }
 }
 
 // ─── STATE UPDATES ───────────────────────────────────────────────────────────
 function setScreen(screen) {
   state.screen = screen;
   if (screen === 'setup') {
-    state.selectedDays = [];
-    state.schedule = {};
-    state.activeDay = null;
+    // Preserve current selections when editing (don't clear them)
+    // This allows users to modify their existing setup
   }
   render();
 }
@@ -48,6 +56,11 @@ function confirmSchedule() {
   state.schedule = buildSchedule(sorted);
   state.activeDay = sorted[0];
   state.screen = 'tracker';
+  
+  // Persist schedule to storage
+  saveSelectedDays(state.selectedDays);
+  saveSchedule(state.schedule);
+  
   render();
 }
 
@@ -58,6 +71,7 @@ function setActiveDay(day) {
 
 function setMode(mode) {
   state.mode = mode;
+  saveMode(mode);
   render();
 }
 
