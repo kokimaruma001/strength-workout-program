@@ -18,16 +18,19 @@
 
 // ─── STORAGE HELPERS ────────────────────────────────────────────────────────
 const STORAGE_KEYS = {
-  workoutLog: 'ppLog',
-  mobilityLog: 'ppMobility',
-  selectedDays: 'ppSelectedDays',
-  schedule: 'ppSchedule',
-  mode: 'ppMode',
+  currentUser: 'ppCurrentUser',
 };
 
-function loadState(key, fallback) {
+function getStorageKey(key, user = null) {
+  const activeUser = user || getCurrentUser();
+  if (!activeUser) return key;
+  return `${key}_${activeUser}`;
+}
+
+function loadState(key, fallback, user = null) {
   try {
-    const raw = localStorage.getItem(key);
+    const storageKey = getStorageKey(key, user);
+    const raw = localStorage.getItem(storageKey);
     return raw ? JSON.parse(raw) : fallback;
   } catch (e) {
     console.error('Error loading state:', e);
@@ -35,62 +38,103 @@ function loadState(key, fallback) {
   }
 }
 
-function saveState(key, val) {
+function saveState(key, val, user = null) {
   try {
-    localStorage.setItem(key, JSON.stringify(val));
+    const storageKey = getStorageKey(key, user);
+    localStorage.setItem(storageKey, JSON.stringify(val));
   } catch (e) {
     console.error('Error saving state:', e);
   }
 }
 
+// ─── USER MANAGEMENT ────────────────────────────────────────────────────────
+function getCurrentUser() {
+  try {
+    return localStorage.getItem(STORAGE_KEYS.currentUser);
+  } catch (e) {
+    console.error('Error getting current user:', e);
+    return null;
+  }
+}
+
+function setCurrentUser(userName) {
+  try {
+    if (userName) {
+      localStorage.setItem(STORAGE_KEYS.currentUser, userName);
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.currentUser);
+    }
+  } catch (e) {
+    console.error('Error setting current user:', e);
+  }
+}
+
+function getAllUsers() {
+  const users = new Set();
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      const match = key?.match(/_(.+)$/);
+      if (match && match[1]) {
+        users.add(match[1]);
+      }
+    }
+  } catch (e) {
+    console.error('Error getting users:', e);
+  }
+  return Array.from(users).sort();
+}
+
 function getWorkoutLog() {
-  return loadState(STORAGE_KEYS.workoutLog, {});
+  return loadState('ppLog', {});
 }
 
 function getMobilityLog() {
-  return loadState(STORAGE_KEYS.mobilityLog, {});
+  return loadState('ppMobility', {});
 }
 
 function getSelectedDays() {
-  return loadState(STORAGE_KEYS.selectedDays, []);
+  return loadState('ppSelectedDays', []);
 }
 
 function getSchedule() {
-  return loadState(STORAGE_KEYS.schedule, {});
+  return loadState('ppSchedule', {});
 }
 
 function getMode() {
-  return loadState(STORAGE_KEYS.mode, 'gym');
+  return loadState('ppMode', 'gym');
 }
 
 function saveWorkoutLog(log) {
-  saveState(STORAGE_KEYS.workoutLog, log);
+  saveState('ppLog', log);
 }
 
 function saveMobilityLog(log) {
-  saveState(STORAGE_KEYS.mobilityLog, log);
+  saveState('ppMobility', log);
 }
 
 function saveSelectedDays(days) {
-  saveState(STORAGE_KEYS.selectedDays, days);
+  saveState('ppSelectedDays', days);
 }
 
 function saveSchedule(schedule) {
-  saveState(STORAGE_KEYS.schedule, schedule);
+  saveState('ppSchedule', schedule);
 }
 
 function saveMode(mode) {
-  saveState(STORAGE_KEYS.mode, mode);
+  saveState('ppMode', mode);
 }
 
 function clearAllData() {
   try {
-    localStorage.removeItem(STORAGE_KEYS.workoutLog);
-    localStorage.removeItem(STORAGE_KEYS.mobilityLog);
-    localStorage.removeItem(STORAGE_KEYS.selectedDays);
-    localStorage.removeItem(STORAGE_KEYS.schedule);
-    localStorage.removeItem(STORAGE_KEYS.mode);
-    console.log('All data cleared');
+    const user = getCurrentUser();
+    if (!user) return;
+    localStorage.removeItem(`ppLog_${user}`);
+    localStorage.removeItem(`ppMobility_${user}`);
+    localStorage.removeItem(`ppSelectedDays_${user}`);
+    localStorage.removeItem(`ppSchedule_${user}`);
+    localStorage.removeItem(`ppMode_${user}`);
+    console.log(`All data cleared for user: ${user}`);
   } catch (e) {
     console.error('Error clearing data:', e);
   }

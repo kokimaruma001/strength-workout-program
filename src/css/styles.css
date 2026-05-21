@@ -792,6 +792,72 @@ input[type="time"] {
     color: #555;
 }
 
+/* ─── LOGIN SCREEN ─────────────────────────────────────────────────────────── */
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.input-wrapper {
+    width: 100%;
+}
+
+.name-input {
+    width: 100%;
+    padding: 12px 14px;
+    background: #0a0a0a;
+    border: 1px solid #333;
+    color: #e8e4dc;
+    font-size: 14px;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 1px;
+}
+
+.name-input::placeholder {
+    color: #555;
+}
+
+.name-input:focus {
+    outline: none;
+    border-color: #c8501a;
+}
+
+.divider-text {
+    text-align: center;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: #555;
+    margin: 20px 0 16px;
+    text-transform: uppercase;
+}
+
+.user-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.user-btn {
+    padding: 12px 14px;
+    background: #111;
+    border: 1px solid #333;
+    color: #e8e4dc;
+    font-size: 13px;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+}
+
+.user-btn:hover {
+    background: #1a0a00;
+    border-color: #c8501a;
+    color: #c8501a;
+}
+
 /* ─── RESPONSIVE ────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
     .page {

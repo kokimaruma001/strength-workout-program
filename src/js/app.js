@@ -1,7 +1,8 @@
 // ─── STATE MANAGEMENT ───────────────────────────────────────────────────────
 let state = {
-  screen: 'setup',  // setup | tracker
+  screen: 'login',  // login | setup | tracker
   navTab: 'today',  // today | week | month
+  currentUser: null,
   selectedDays: [],
   schedule: {},
   activeDay: null,
@@ -13,6 +14,34 @@ let state = {
 
 // ─── INIT STATE ──────────────────────────────────────────────────────────────
 function initState() {
+  const savedUser = getCurrentUser();
+  if (savedUser) {
+    state.currentUser = savedUser;
+    state.workoutLog = getWorkoutLog();
+    state.mobilityLog = getMobilityLog();
+    state.selectedDays = getSelectedDays();
+    state.schedule = getSchedule();
+    state.mode = getMode();
+    
+    // If user has a saved schedule, skip setup screen
+    if (Object.keys(state.schedule).length > 0) {
+      state.screen = 'tracker';
+      state.activeDay = state.selectedDays[0] || Object.keys(state.schedule)[0];
+    } else {
+      state.screen = 'setup';
+    }
+  } else {
+    state.screen = 'login';
+  }
+}
+
+// ─── STATE UPDATES ───────────────────────────────────────────────────────────
+function loginUser(userName) {
+  const cleanName = userName.trim();
+  if (!cleanName) return;
+  
+  setCurrentUser(cleanName);
+  state.currentUser = cleanName;
   state.workoutLog = getWorkoutLog();
   state.mobilityLog = getMobilityLog();
   state.selectedDays = getSelectedDays();
@@ -23,10 +52,24 @@ function initState() {
   if (Object.keys(state.schedule).length > 0) {
     state.screen = 'tracker';
     state.activeDay = state.selectedDays[0] || Object.keys(state.schedule)[0];
+  } else {
+    state.screen = 'setup';
   }
+  
+  render();
 }
 
-// ─── STATE UPDATES ───────────────────────────────────────────────────────────
+function logoutUser() {
+  state.currentUser = null;
+  state.screen = 'login';
+  state.selectedDays = [];
+  state.schedule = {};
+  state.workoutLog = {};
+  state.mobilityLog = {};
+  setCurrentUser(null);
+  render();
+}
+
 function setScreen(screen) {
   state.screen = screen;
   if (screen === 'setup') {
@@ -104,11 +147,80 @@ function render() {
   const app = document.getElementById('app');
   app.innerHTML = '';
   
-  if (state.screen === 'setup') {
+  if (state.screen === 'login') {
+    app.appendChild(renderLogin());
+  } else if (state.screen === 'setup') {
     app.appendChild(renderSetup());
   } else {
     app.appendChild(renderTracker());
   }
+}
+
+function renderLogin() {
+  const container = createElement('div', 'page');
+  
+  const header = createElement('div', 'header');
+  header.innerHTML = `
+    <div class="eyebrow">FUNCTIONAL STRENGTH SYSTEM</div>
+    <div class="title">POWER PROTOCOL</div>
+    <div class="subtitle">BUILD LIKE ANATOLI. MOVE LIKE BAKI.</div>
+  `;
+  
+  const content = createElement('div', 'setup-content');
+  
+  const heading = createElement('div');
+  heading.innerHTML = `
+    <div style="font-size: 10px; letter-spacing: 4px; color: #c8501a; margin-bottom: 4px; text-transform: uppercase;">WELCOME</div>
+    <div style="font-size: 17px; font-weight: 900; margin-bottom: 4px;">ENTER YOUR NAME</div>
+    <div style="font-size: 12px; color: #555; margin-bottom: 20px; line-height: 1.7;">
+      Start tracking your strength journey. Your data will be saved and personalized for you.
+    </div>
+  `;
+  content.appendChild(heading);
+  
+  const form = createElement('form', 'login-form');
+  form.onsubmit = (e) => {
+    e.preventDefault();
+    const input = form.querySelector('input');
+    loginUser(input.value);
+  };
+  
+  const inputWrapper = createElement('div', 'input-wrapper');
+  const input = createElement('input');
+  input.type = 'text';
+  input.placeholder = 'Your name';
+  input.className = 'name-input';
+  input.maxLength = '50';
+  input.autofocus = true;
+  inputWrapper.appendChild(input);
+  form.appendChild(inputWrapper);
+  
+  const btn = createElement('button', 'btn-primary');
+  btn.type = 'submit';
+  btn.textContent = 'START PROGRAM →';
+  form.appendChild(btn);
+  
+  content.appendChild(form);
+  
+  const existingUsers = getAllUsers();
+  if (existingUsers.length > 0) {
+    const divider = createElement('div', 'divider-text');
+    divider.textContent = 'OR SELECT EXISTING USER';
+    content.appendChild(divider);
+    
+    const userList = createElement('div', 'user-list');
+    existingUsers.forEach(user => {
+      const userBtn = createElement('button', 'user-btn');
+      userBtn.textContent = user;
+      userBtn.onclick = () => loginUser(user);
+      userList.appendChild(userBtn);
+    });
+    content.appendChild(userList);
+  }
+  
+  container.appendChild(header);
+  container.appendChild(content);
+  return container;
 }
 
 function renderSetup() {
@@ -195,17 +307,30 @@ function renderTodayView() {
   headerContent.style.display = 'flex';
   headerContent.style.justifyContent = 'space-between';
   headerContent.style.alignItems = 'flex-start';
-  headerContent.innerHTML = `
-    <div>
-      <div class="eyebrow">FUNCTIONAL STRENGTH SYSTEM</div>
-      <div class="title">POWER PROTOCOL</div>
-    </div>
+  
+  const headerLeft = createElement('div');
+  headerLeft.innerHTML = `
+    <div class="eyebrow">FUNCTIONAL STRENGTH SYSTEM</div>
+    <div class="title">POWER PROTOCOL</div>
+    <div style="font-size: 11px; color: #c8501a; margin-top: 4px;">👤 ${state.currentUser}</div>
   `;
+  headerContent.appendChild(headerLeft);
+  
+  const headerRight = createElement('div');
+  headerRight.style.display = 'flex';
+  headerRight.style.gap = '8px';
   
   const editBtn = createElement('button', 'btn-secondary');
   editBtn.textContent = 'EDIT DAYS';
   editBtn.onclick = () => setScreen('setup');
-  headerContent.appendChild(editBtn);
+  headerRight.appendChild(editBtn);
+  
+  const logoutBtn = createElement('button', 'btn-secondary');
+  logoutBtn.textContent = 'LOGOUT';
+  logoutBtn.onclick = logoutUser;
+  headerRight.appendChild(logoutBtn);
+  
+  headerContent.appendChild(headerRight);
   
   header.appendChild(headerContent);
   fragment.appendChild(header);
