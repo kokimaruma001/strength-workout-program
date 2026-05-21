@@ -9,8 +9,9 @@ let state = {
   mode: 'gym',  // gym | home
   showMobility: false,
   workoutLog: {},
-  mobilityLog: {},
-};
+  mobilityLog: {},  detailDay: null,  // Date string (YYYY-MM-DD) for day detail view
+  viewWeekOffset: 0,  // 0 = current week, -1 = last week, +1 = next week
+  viewMonthOffset: 0,  // 0 = current month, -1 = last month, +1 = next month};
 
 // ─── INIT STATE ──────────────────────────────────────────────────────────────
 function initState() {
@@ -139,6 +140,28 @@ function toggleMobilityItem(i) {
 
 function setShowMobility(show) {
   state.showMobility = show;
+  render();
+}
+
+function setDetailDay(date) {
+  state.detailDay = date;
+  state.navTab = 'detail';
+  render();
+}
+
+function setViewWeekOffset(offset) {
+  state.viewWeekOffset = offset;
+  render();
+}
+
+function setViewMonthOffset(offset) {
+  state.viewMonthOffset = offset;
+  render();
+}
+
+function closeDetailView() {
+  state.detailDay = null;
+  state.navTab = 'week';  // Or go back to previous tab
   render();
 }
 
@@ -292,6 +315,8 @@ function renderTracker() {
     container.appendChild(renderWeekView());
   } else if (state.navTab === 'month') {
     container.appendChild(renderMonthView());
+  } else if (state.navTab === 'detail') {
+    container.appendChild(renderDayDetailView());
   }
   
   container.appendChild(renderNavBar());
@@ -551,26 +576,34 @@ function renderWeekView() {
   content.style.paddingBottom = '100px';
   
   // Week nav and stats
-  const weekDates = getWeekDates(0);
+  const weekDates = getWeekDates(state.viewWeekOffset);
   const dayNames = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
   
   const nav = createElement('div', 'week-nav');
   const prevBtn = createElement('button', 'nav-btn');
-  prevBtn.textContent = '‹';
-  prevBtn.disabled = true;
+  prevBtn.textContent = '‹ PREV';
+  prevBtn.onclick = () => setViewWeekOffset(state.viewWeekOffset - 1);
   const label = createElement('span', 'nav-label');
   const s = new Date(weekDates[0]);
   const e = new Date(weekDates[6]);
   label.textContent = `${s.getDate()} ${s.toLocaleString("default",{month:"short"})} – ${e.getDate()} ${e.toLocaleString("default",{month:"short"})} ${e.getFullYear()}`;
   const nextBtn = createElement('button', 'nav-btn');
-  nextBtn.textContent = '›';
-  nextBtn.disabled = true;
+  nextBtn.textContent = 'NEXT ›';
+  nextBtn.onclick = () => setViewWeekOffset(state.viewWeekOffset + 1);
+  
+  // Disable future navigation
+  const isCurrentWeek = state.viewWeekOffset === 0;
+  const nextWeekStart = new Date(getWeekDates(1)[0]);
+  const twoWeeksFromNow = new Date();
+  twoWeeksFromNow.setDate(twoWeeksFromNow.getDate() + 14);
+  nextBtn.disabled = nextWeekStart > twoWeeksFromNow;
+  
   nav.appendChild(prevBtn);
   nav.appendChild(label);
   nav.appendChild(nextBtn);
   content.appendChild(nav);
   
-  // Session dots
+  // Session dots - CLICKABLE
   const dotsCard = createElement('div', 'card');
   const dotsLabel = createElement('div', 'section-label');
   const workedDates = weekDates.filter(d => state.workoutLog[d]?.done);
@@ -581,12 +614,16 @@ function renderWeekView() {
   weekDates.forEach((date, i) => {
     const done = state.workoutLog[date]?.done;
     const isToday = date === isoToday();
-    const dateDiv = createElement('div', 'week-date');
+    const dateDiv = createElement('div', 'week-date clickable');
+    dateDiv.style.cursor = 'pointer';
+    dateDiv.onclick = () => setDetailDay(date);
     dateDiv.innerHTML = `
       <div class="week-day ${isToday ? 'today' : ''}">${dayNames[i]}</div>
       <div class="week-dot ${done ? 'done' : ''} ${isToday ? 'today' : ''}">${done ? '✓' : ''}</div>
       <div class="week-date-num">${new Date(date).getDate()}</div>
     `;
+    dateDiv.onmouseover = () => dateDiv.style.opacity = '0.7';
+    dateDiv.onmouseout = () => dateDiv.style.opacity = '1';
     datesContainer.appendChild(dateDiv);
   });
   dotsCard.appendChild(datesContainer);
@@ -644,7 +681,7 @@ function renderWeekView() {
         entryDiv.style.padding = '5px 0';
         entryDiv.style.borderBottom = '1px solid #1a1a1a';
         entryDiv.innerHTML = `
-          <span style="font-size: 11px; color: #666;">${formatDate(e.date, 'short')}</span>
+          <span style="font-size: 11px; color: #666; cursor: pointer;" onclick="setDetailDay('${e.date}')" title="Click to view day details">${formatDate(e.date, 'short')}</span>
           <span style="font-size: 11px; color: #e8e4dc; font-weight: 700;">${e.kg} kg ${e.reps ? `× ${e.reps} reps` : ''}</span>
         `;
         nameDiv.appendChild(entryDiv);
@@ -680,23 +717,30 @@ function renderMonthView() {
   const content = createElement('div', 'content');
   content.style.paddingBottom = '100px';
   
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
+  const monthInfo = getMonthInfo(state.viewMonthOffset);
+  const year = monthInfo.year;
+  const month = monthInfo.month;
   const monthName = `${MONTHS[month]} ${year}`;
   
   const nav = createElement('div', 'month-nav');
   const prevBtn = createElement('button', 'nav-btn');
-  prevBtn.textContent = '‹';
-  prevBtn.disabled = true;
+  prevBtn.textContent = '‹ PREV';
+  prevBtn.onclick = () => setViewMonthOffset(state.viewMonthOffset - 1);
   const label = createElement('span', 'nav-label');
   label.style.fontSize = '13px';
   label.style.fontWeight = '900';
   label.style.letterSpacing = '2px';
   label.textContent = monthName.toUpperCase();
   const nextBtn = createElement('button', 'nav-btn');
-  nextBtn.textContent = '›';
-  nextBtn.disabled = true;
+  nextBtn.textContent = 'NEXT ›';
+  nextBtn.onclick = () => setViewMonthOffset(state.viewMonthOffset + 1);
+  
+  // Disable future navigation
+  const nextMonth = new Date();
+  nextMonth.setMonth(nextMonth.getMonth() + 2);
+  const viewingDate = new Date(year, month, 1);
+  nextBtn.disabled = viewingDate >= nextMonth;
+  
   nav.appendChild(prevBtn);
   nav.appendChild(label);
   nav.appendChild(nextBtn);
@@ -726,10 +770,10 @@ function renderMonthView() {
   });
   content.appendChild(statsRow);
   
-  // Calendar heatmap
+  // Calendar heatmap - CLICKABLE
   const calCard = createElement('div', 'card');
   const calLabel = createElement('div', 'section-label');
-  calLabel.textContent = 'WORKOUT CALENDAR';
+  calLabel.textContent = 'WORKOUT CALENDAR — CLICK DATE FOR DETAILS';
   calCard.appendChild(calLabel);
   
   const dayHeaders = createElement('div', 'calendar-grid');
@@ -752,8 +796,12 @@ function renderMonthView() {
     } else {
       const done = state.workoutLog[date]?.done;
       const isToday = date === isoToday();
-      const cell = createElement('div', `calendar-cell ${done ? 'done' : ''} ${isToday ? 'today' : ''}`);
+      const cell = createElement('div', `calendar-cell ${done ? 'done' : ''} ${isToday ? 'today' : ''} clickable`);
+      cell.style.cursor = 'pointer';
       cell.textContent = new Date(date).getDate();
+      cell.onclick = () => setDetailDay(date);
+      cell.onmouseover = () => cell.style.opacity = '0.7';
+      cell.onmouseout = () => cell.style.opacity = '1';
       grid.appendChild(cell);
     }
   });
@@ -800,13 +848,205 @@ function renderMonthView() {
   return fragment;
 }
 
+function renderDayDetailView() {
+  const fragment = document.createDocumentFragment();
+  
+  if (!state.detailDay) {
+    const error = createElement('div', 'page');
+    error.innerHTML = '<div style="padding: 20px; text-align: center;">No day selected</div>';
+    return error;
+  }
+  
+  const date = new Date(state.detailDay + 'T00:00:00');
+  const dayName = date.toLocaleDateString('en-GB', { weekday: 'long' });
+  const formattedDate = date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  
+  // Header
+  const header = createElement('div', 'header');
+  header.innerHTML = `
+    <div class="eyebrow">FUNCTIONAL STRENGTH SYSTEM</div>
+    <div class="title">DAY DETAILS</div>
+    <div style="font-size: 11px; color: #c8501a; margin-top: 4px;">${formattedDate}</div>
+  `;
+  fragment.appendChild(header);
+  
+  // Content
+  const content = createElement('div', 'content');
+  content.style.paddingBottom = '100px';
+  
+  // Back button
+  const backBtn = createElement('button', 'btn-secondary');
+  backBtn.textContent = '← BACK TO WEEK';
+  backBtn.onclick = () => {
+    state.detailDay = null;
+    state.navTab = 'week';
+    render();
+  };
+  backBtn.style.marginBottom = '14px';
+  content.appendChild(backBtn);
+  
+  const dayLog = state.workoutLog[state.detailDay];
+  const isToday = state.detailDay === isoToday();
+  
+  if (!dayLog || !dayLog.done) {
+    const noData = createElement('div', 'card');
+    noData.style.textAlign = 'center';
+    noData.style.padding = '30px 14px';
+    noData.innerHTML = `
+      <div style="font-size: 12px; color: #555; line-height: 1.8;">
+        ⊘ NO WORKOUT LOGGED FOR ${dayName.toUpperCase()}
+      </div>
+    `;
+    content.appendChild(noData);
+  } else {
+    // Find which workout was scheduled for this day
+    const dayOfWeek = date.toLocaleDateString('en-GB', { weekday: 'long' });
+    const workoutKey = Object.keys(state.schedule).find(key => {
+      return key.toLowerCase() === dayOfWeek.toLowerCase();
+    });
+    const workout = workoutKey ? state.schedule[workoutKey] : null;
+    
+    // Workout summary
+    if (workout) {
+      const workoutCard = createElement('div', 'card bordered');
+      workoutCard.innerHTML = `
+        <div class="workout-label-main">${workout.label}</div>
+        <div class="workout-label-focus">${workout.focus}</div>
+      `;
+      content.appendChild(workoutCard);
+    }
+    
+    // Exercises completed
+    const exercisesCard = createElement('div', 'card');
+    const exLabel = createElement('div', 'section-label');
+    exLabel.textContent = 'EXERCISES COMPLETED';
+    exercisesCard.appendChild(exLabel);
+    
+    if (!dayLog.completed || Object.keys(dayLog.completed).length === 0) {
+      exercisesCard.innerHTML += '<div style="font-size: 12px; color: #555;">No exercises marked as completed</div>';
+    } else {
+      const completedEx = [];
+      Object.entries(dayLog.completed).forEach(([exId, done]) => {
+        if (done) {
+          const { exercise } = getWorkoutByExId(exId);
+          if (exercise) {
+            completedEx.push({ id: exId, ...exercise });
+          }
+        }
+      });
+      
+      completedEx.forEach(ex => {
+        const weights = dayLog.weights?.[ex.id] || {};
+        const exDiv = createElement('div');
+        exDiv.style.marginBottom = '12px';
+        exDiv.style.paddingBottom = '12px';
+        exDiv.style.borderBottom = '1px solid #1a1a1a';
+        
+        let weightInfo = '';
+        if (weights.kg) {
+          weightInfo = `<div style="font-size: 11px; color: #c8501a; margin-top: 6px; font-weight: 900;">
+            ${weights.kg} KG${weights.reps ? ` × ${weights.reps} REPS` : ''}
+          </div>`;
+        }
+        
+        exDiv.innerHTML = `
+          <div style="display: flex; gap: 8px;">
+            <div style="color: #c8501a; font-weight: 900;">✓</div>
+            <div style="flex: 1;">
+              <div style="font-size: 12px; font-weight: 900; color: #e8e4dc;">${ex.name}</div>
+              <div style="font-size: 11px; color: #666; margin-top: 4px;">
+                ${ex.sets} • ${ex.note}
+              </div>
+              ${weightInfo}
+            </div>
+          </div>
+        `;
+        exercisesCard.appendChild(exDiv);
+      });
+    }
+    content.appendChild(exercisesCard);
+    
+    // Stats
+    const statsCard = createElement('div', 'card');
+    const statsLabel = createElement('div', 'section-label');
+    statsLabel.textContent = 'SESSION STATS';
+    statsCard.appendChild(statsLabel);
+    
+    const completedCount = Object.values(dayLog.completed || {}).filter(c => c).length;
+    const totalWeights = Object.values(dayLog.weights || {}).filter(w => w.kg).length;
+    
+    const statsGrid = createElement('div');
+    statsGrid.style.display = 'grid';
+    statsGrid.style.gridTemplateColumns = '1fr 1fr';
+    statsGrid.style.gap = '10px';
+    
+    const stat1 = createElement('div');
+    stat1.style.padding = '10px';
+    stat1.style.backgroundColor = '#111';
+    stat1.style.border = '1px solid #222';
+    stat1.innerHTML = `
+      <div style="font-size: 18px; font-weight: 900; color: #c8501a;">${completedCount}</div>
+      <div style="font-size: 10px; color: #666; margin-top: 4px;">EXERCISES</div>
+    `;
+    statsGrid.appendChild(stat1);
+    
+    const stat2 = createElement('div');
+    stat2.style.padding = '10px';
+    stat2.style.backgroundColor = '#111';
+    stat2.style.border = '1px solid #222';
+    stat2.innerHTML = `
+      <div style="font-size: 18px; font-weight: 900; color: #c8501a;">${totalWeights}</div>
+      <div style="font-size: 10px; color: #666; margin-top: 4px;">WEIGHTS LOGGED</div>
+    `;
+    statsGrid.appendChild(stat2);
+    
+    statsCard.appendChild(statsGrid);
+    content.appendChild(statsCard);
+  }
+  
+  // Navigation to adjacent days
+  const prevDate = new Date(state.detailDay + 'T00:00:00');
+  prevDate.setDate(prevDate.getDate() - 1);
+  const prevDateStr = prevDate.toISOString().slice(0, 10);
+  
+  const nextDate = new Date(state.detailDay + 'T00:00:00');
+  nextDate.setDate(nextDate.getDate() + 1);
+  const nextDateStr = nextDate.toISOString().slice(0, 10);
+  
+  const navDates = createElement('div');
+  navDates.style.display = 'flex';
+  navDates.style.gap = '8px';
+  navDates.style.marginTop = '14px';
+  
+  const prevBtn = createElement('button', 'btn-secondary');
+  prevBtn.textContent = '← PREV DAY';
+  prevBtn.style.flex = '1';
+  prevBtn.onclick = () => setDetailDay(prevDateStr);
+  navDates.appendChild(prevBtn);
+  
+  const nextBtn = createElement('button', 'btn-secondary');
+  nextBtn.textContent = 'NEXT DAY →';
+  nextBtn.style.flex = '1';
+  nextBtn.onclick = () => setDetailDay(nextDateStr);
+  navDates.appendChild(nextBtn);
+  
+  content.appendChild(navDates);
+  
+  fragment.appendChild(content);
+  return fragment;
+}
+
 function renderNavBar() {
   const nav = createElement('div', 'nav-bar');
   
   [['today','TODAY'],['week','WEEK'],['month','MONTH']].forEach(([k, l]) => {
     const btn = createElement('button', `btn-tab ${state.navTab === k ? 'active' : ''}`);
     btn.textContent = l;
-    btn.onclick = () => setNavTab(k);
+    btn.onclick = () => {
+      state.viewWeekOffset = 0;
+      state.viewMonthOffset = 0;
+      setNavTab(k);
+    };
     nav.appendChild(btn);
   });
   
