@@ -9,9 +9,11 @@ let state = {
   mode: 'gym',  // gym | home
   showMobility: false,
   workoutLog: {},
-  mobilityLog: {},  detailDay: null,  // Date string (YYYY-MM-DD) for day detail view
+  mobilityLog: {},
+  detailDay: null,  // Date string (YYYY-MM-DD) for day detail view
   viewWeekOffset: 0,  // 0 = current week, -1 = last week, +1 = next week
-  viewMonthOffset: 0,  // 0 = current month, -1 = last month, +1 = next month};
+  viewMonthOffset: 0,  // 0 = current month, -1 = last month, +1 = next month
+};
 
 // ─── INIT STATE ──────────────────────────────────────────────────────────────
 function initState() {
@@ -877,11 +879,11 @@ function renderDayDetailView() {
   // Back button
   const backBtn = createElement('button', 'btn-secondary');
   backBtn.textContent = '← BACK TO WEEK';
-  backBtn.onclick = () => {
+  backBtn.addEventListener('click', () => {
     state.detailDay = null;
     state.navTab = 'week';
     render();
-  };
+  });
   backBtn.style.marginBottom = '14px';
   content.appendChild(backBtn);
   
@@ -1021,13 +1023,16 @@ function renderDayDetailView() {
   const prevBtn = createElement('button', 'btn-secondary');
   prevBtn.textContent = '← PREV DAY';
   prevBtn.style.flex = '1';
-  prevBtn.onclick = () => setDetailDay(prevDateStr);
+  prevBtn.addEventListener('click', () => setDetailDay(prevDateStr));
   navDates.appendChild(prevBtn);
   
   const nextBtn = createElement('button', 'btn-secondary');
   nextBtn.textContent = 'NEXT DAY →';
   nextBtn.style.flex = '1';
-  nextBtn.onclick = () => setDetailDay(nextDateStr);
+  nextBtn.addEventListener('click', (e) => {
+    console.log('NEXT DAY button clicked', nextDateStr, e);
+    setDetailDay(nextDateStr);
+  });
   navDates.appendChild(nextBtn);
   
   content.appendChild(navDates);
@@ -1051,18 +1056,6 @@ function renderNavBar() {
   });
   
   return nav;
-}
-
-// ─── HELPER FUNCTIONS ────────────────────────────────────────────────────────
-function getWeekDates(offset = 0) {
-  const d = new Date();
-  d.setHours(0,0,0,0);
-  d.setDate(d.getDate() - d.getDay() + 1);
-  return Array.from({ length: 7 }, (_, i) => {
-    const day = new Date(d);
-    day.setDate(d.getDate() + i + offset * 7);
-    return day.toISOString().slice(0,10);
-  });
 }
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
