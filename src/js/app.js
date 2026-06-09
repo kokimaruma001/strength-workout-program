@@ -10,9 +10,12 @@ let state = {
   showMobility: false,
   workoutLog: {},
   mobilityLog: {},
+  exerciseSubstitutions: {},  // Map of original exId to substituted exId
   detailDay: null,  // Date string (YYYY-MM-DD) for day detail view
   viewWeekOffset: 0,  // 0 = current week, -1 = last week, +1 = next week
   viewMonthOffset: 0,  // 0 = current month, -1 = last month, +1 = next month
+  showExerciseModal: false,  // For showing alternative exercise selector
+  modalExerciseId: null,  // Exercise ID for which we're selecting alternatives
 };
 
 // ─── INIT STATE ──────────────────────────────────────────────────────────────
@@ -25,6 +28,7 @@ function initState() {
     state.selectedDays = getSelectedDays();
     state.schedule = getSchedule();
     state.mode = getMode();
+    state.exerciseSubstitutions = getExerciseSubstitutions();
     
     // If user has a saved schedule, skip setup screen
     if (Object.keys(state.schedule).length > 0) {
@@ -50,6 +54,7 @@ function loginUser(userName) {
   state.selectedDays = getSelectedDays();
   state.schedule = getSchedule();
   state.mode = getMode();
+  state.exerciseSubstitutions = getExerciseSubstitutions();
   
   // If user has a saved schedule, skip setup screen
   if (Object.keys(state.schedule).length > 0) {
@@ -164,6 +169,56 @@ function setViewMonthOffset(offset) {
 function closeDetailView() {
   state.detailDay = null;
   state.navTab = 'week';  // Or go back to previous tab
+  render();
+}
+
+function openExerciseModal(exId) {
+  state.showExerciseModal = true;
+  state.modalExerciseId = exId;
+  render();
+}
+
+function closeExerciseModal() {
+  state.showExerciseModal = false;
+  state.modalExerciseId = null;
+  render();
+}
+
+function swapExercise(originalExId, newExId) {
+  state.exerciseSubstitutions[originalExId] = newExId;
+  saveExerciseSubstitutions(state.exerciseSubstitutions);
+  closeExerciseModal();
+}
+
+function undoExerciseSwap(originalExId) {
+  delete state.exerciseSubstitutions[originalExId];
+  saveExerciseSubstitutions(state.exerciseSubstitutions);
+  render();
+}
+
+function copyFromPreviousWeek() {
+  const today = isoToday();
+  const currentWeekDates = getWeekDates(0);
+  const previousWeekDates = getWeekDates(-1);
+  
+  // Find the equivalent day in previous week
+  const dayIndex = currentWeekDates.indexOf(today);
+  if (dayIndex < 0) return;
+  
+  const previousDate = previousWeekDates[dayIndex];
+  const previousEntry = state.workoutLog[previousDate];
+  
+  if (!previousEntry) {
+    alert('No data from previous week');
+    return;
+  }
+  
+  // Copy weights and completion status from previous week
+  const currentEntry = state.workoutLog[today] || { completed: {}, weights: {}, done: false };
+  currentEntry.weights = JSON.parse(JSON.stringify(previousEntry.weights || {}));
+  state.workoutLog[today] = currentEntry;
+  
+  saveWorkoutLog(state.workoutLog);
   render();
 }
 
@@ -322,6 +377,12 @@ function renderTracker() {
   }
   
   container.appendChild(renderNavBar());
+  
+  // Render modal if open
+  if (state.showExerciseModal && state.modalExerciseId) {
+    container.appendChild(renderExerciseModal());
+  }
+  
   return container;
 }
 
@@ -435,11 +496,33 @@ function renderTodayView() {
       complete.textContent = '✓ SESSION COMPLETE — LOGGED';
       progressSection.appendChild(complete);
     }
+    
+    // Copy from last week button
+    const previousDate = getWeekDates(-1)[getWeekDates(0).indexOf(today)];
+    if (previousDate && state.workoutLog[previousDate]) {
+      const copyBtn = createElement('button', 'btn-copy-last-week');
+      copyBtn.textContent = '↻ COPY FROM LAST WEEK';
+      copyBtn.onclick = () => copyFromPreviousWeek();
+      copyBtn.style.marginTop = '10px';
+      copyBtn.style.width = '100%';
+      progressSection.appendChild(copyBtn);
+    }
+    
     content.appendChild(progressSection);
     
     // Exercise list
     const exerciseList = createElement('div', 'exercise-list');
     exercises.forEach(ex => {
+      // Check if exercise has been substituted
+      let displayEx = ex;
+      if (state.exerciseSubstitutions[ex.id]) {
+        const substitutedId = state.exerciseSubstitutions[ex.id];
+        const substituted = findExerciseById(substitutedId);
+        if (substituted) {
+          displayEx = substituted;
+        }
+      }
+      
       const done = !!todayEntry.completed?.[ex.id];
       const weights = todayEntry.weights?.[ex.id] || {};
       
@@ -448,17 +531,24 @@ function renderTodayView() {
       header.onclick = () => toggleExercise(ex.id);
       
       const checkbox = createElement('div', 'exercise-checkbox');
+      checkbox.style.cursor = 'pointer';
       if (done) checkbox.textContent = '✓';
       
       const content_inner = createElement('div', 'exercise-content');
       const name = createElement('div', 'exercise-name');
-      name.textContent = ex.name;
+      
+      // Show original and substituted exercise name if different
+      if (state.exerciseSubstitutions[ex.id]) {
+        name.innerHTML = `<span style="text-decoration: line-through; opacity: 0.5; font-size: 11px;">${ex.name}</span><br/>${displayEx.name} <span style="color: #c8501a; font-size: 10px;">★ ALTERNATIVE</span>`;
+      } else {
+        name.textContent = displayEx.name;
+      }
       
       const meta = createElement('div', 'exercise-meta');
       const sets = createElement('span', 'exercise-sets');
-      sets.textContent = ex.sets;
+      sets.textContent = displayEx.sets;
       const note = createElement('span', 'exercise-note');
-      note.textContent = ex.note;
+      note.textContent = displayEx.note;
       meta.appendChild(sets);
       meta.appendChild(note);
       
@@ -469,8 +559,39 @@ function renderTodayView() {
       header.appendChild(content_inner);
       item.appendChild(header);
       
+      // Change exercise button
+      const changeExerciseSection = createElement('div', 'exercise-action-buttons');
+      changeExerciseSection.style.display = 'flex';
+      changeExerciseSection.style.gap = '8px';
+      changeExerciseSection.style.padding = '8px 0 0 0';
+      changeExerciseSection.style.borderTop = '1px solid #1a1a1a';
+      
+      const changeBtn = createElement('button', 'btn-small');
+      changeBtn.style.flex = '1';
+      changeBtn.textContent = '🔄 CHANGE EXERCISE';
+      changeBtn.onclick = (e) => {
+        e.stopPropagation();
+        openExerciseModal(ex.id);
+      };
+      changeExerciseSection.appendChild(changeBtn);
+      
+      // Undo substitution button if exercise was substituted
+      if (state.exerciseSubstitutions[ex.id]) {
+        const undoBtn = createElement('button', 'btn-small');
+        undoBtn.style.flex = '0.5';
+        undoBtn.textContent = '↩';
+        undoBtn.title = 'Undo substitution';
+        undoBtn.onclick = (e) => {
+          e.stopPropagation();
+          undoExerciseSwap(ex.id);
+        };
+        changeExerciseSection.appendChild(undoBtn);
+      }
+      
+      item.appendChild(changeExerciseSection);
+      
       // Weight inputs
-      if (ex.weighted) {
+      if (displayEx.weighted) {
         const weightsDiv = createElement('div', 'exercise-weights');
         
         const kgGroup = createElement('div', 'weight-input-group');
@@ -1056,6 +1177,81 @@ function renderNavBar() {
   });
   
   return nav;
+}
+
+function renderExerciseModal() {
+  const modal = createElement('div', 'modal-overlay');
+  modal.onclick = (e) => {
+    if (e.target === modal) closeExerciseModal();
+  };
+  
+  const modalContent = createElement('div', 'modal-content');
+  
+  const header = createElement('div', 'modal-header');
+  const title = createElement('div', 'modal-title');
+  const originalEx = findExerciseById(state.modalExerciseId);
+  title.textContent = `Change Exercise: ${originalEx?.name || 'Unknown'}`;
+  header.appendChild(title);
+  
+  const closeBtn = createElement('button', 'modal-close');
+  closeBtn.innerHTML = '✕';
+  closeBtn.onclick = closeExerciseModal;
+  header.appendChild(closeBtn);
+  
+  modalContent.appendChild(header);
+  
+  const body = createElement('div', 'modal-body');
+  
+  // Get similar exercises
+  const alternatives = getSimilarExercises(state.modalExerciseId, state.mode, state.schedule[state.activeDay]?.key);
+  
+  if (alternatives.length === 0) {
+    body.innerHTML = '<p style="color: #666; text-align: center;">No alternative exercises available for this exercise.</p>';
+  } else {
+    const listLabel = createElement('div', 'modal-section-label');
+    listLabel.textContent = 'SIMILAR EXERCISES';
+    body.appendChild(listLabel);
+    
+    const exerciseList = createElement('div', 'modal-exercise-list');
+    
+    alternatives.forEach(alt => {
+      const option = createElement('button', 'modal-exercise-option');
+      const optName = createElement('div', 'modal-exercise-name');
+      optName.textContent = alt.name;
+      
+      const optMeta = createElement('div', 'modal-exercise-meta');
+      optMeta.innerHTML = `<span style="color: #999; font-size: 11px;">${alt.sets} • ${alt.note}</span>`;
+      
+      const optMode = createElement('div', 'modal-exercise-mode');
+      optMode.textContent = `[${alt.mode === 'gym' ? '🏋️ GYM' : '🏠 HOME'}]`;
+      optMode.style.color = '#c8501a';
+      optMode.style.fontSize = '11px';
+      optMode.style.marginTop = '4px';
+      
+      option.appendChild(optName);
+      option.appendChild(optMeta);
+      option.appendChild(optMode);
+      
+      option.onclick = () => swapExercise(state.modalExerciseId, alt.id);
+      
+      exerciseList.appendChild(option);
+    });
+    
+    body.appendChild(exerciseList);
+  }
+  
+  // Keep original button
+  const keepOriginalBtn = createElement('button', 'btn-secondary');
+  keepOriginalBtn.textContent = 'KEEP ORIGINAL EXERCISE';
+  keepOriginalBtn.style.width = '100%';
+  keepOriginalBtn.style.marginTop = '12px';
+  keepOriginalBtn.onclick = closeExerciseModal;
+  body.appendChild(keepOriginalBtn);
+  
+  modalContent.appendChild(body);
+  modal.appendChild(modalContent);
+  
+  return modal;
 }
 
 // ─── INIT ────────────────────────────────────────────────────────────────────

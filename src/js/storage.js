@@ -105,6 +105,10 @@ function getMode() {
   return loadState('ppMode', 'gym');
 }
 
+function getExerciseSubstitutions() {
+  return loadState('ppSubstitutions', {});
+}
+
 function saveWorkoutLog(log) {
   saveState('ppLog', log);
 }
@@ -123,6 +127,10 @@ function saveSchedule(schedule) {
 
 function saveMode(mode) {
   saveState('ppMode', mode);
+}
+
+function saveExerciseSubstitutions(subs) {
+  saveState('ppSubstitutions', subs);
 }
 
 function clearAllData() {

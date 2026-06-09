@@ -80,3 +80,81 @@ const DAILY_MOBILITY = [
   "Glute bridge hold — 30sec",
   "Shoulder dislocations with band/towel — 10 reps",
 ];
+
+// ─── EXERCISE METADATA FOR ALTERNATIVES ───────────────────────────────────────
+// Map exercises to categories for finding alternatives
+const EXERCISE_CATEGORIES = {
+  // Lower Power
+  "sq":   { category: "squat", name: "Barbell Back Squat", alternatives: ["bs", "jp", "sl"] },
+  "dl":   { category: "deadlift", name: "Conventional Deadlift", alternatives: ["pdl", "sl"] },
+  "bs":   { category: "squat", name: "Belt Squat", alternatives: ["sq", "jp", "lp"] },
+  "rh":   { category: "posterior_chain", name: "Reverse Hyperextension", alternatives: ["glb", "hp", "sl"] },
+  "ca":   { category: "grip_tension", name: "Farmer's Walk", alternatives: [] },
+  "jp":   { category: "squat", name: "Jump Squats", alternatives: ["sq", "bs", "lp"] },
+  "sl":   { category: "deadlift", name: "Single-Leg RDL", alternatives: ["dl", "rh", "glb"] },
+  "lp":   { category: "squat", name: "Lateral Lunges", alternatives: ["jp", "bs", "sl"] },
+  "glb":  { category: "posterior_chain", name: "Glute Bridge w/ Pause", alternatives: ["hp", "rh", "sl"] },
+  "hp":   { category: "posterior_chain", name: "Hip Thrust", alternatives: ["glb", "rh", "dl"] },
+  // Upper Power
+  "bp":   { category: "pressing", name: "Bench Press", alternatives: ["pup", "wd", "pke"] },
+  "wpu":  { category: "pulling", name: "Weighted Pull-Ups", alternatives: ["inv", "iso", "dbr"] },
+  "op":   { category: "pressing", name: "Overhead Press", alternatives: ["pke", "bp"] },
+  "dbr":  { category: "pulling", name: "Heavy Dumbbell Row", alternatives: ["wpu", "inv", "iso"] },
+  "wd":   { category: "pressing", name: "Weighted Dips", alternatives: ["bp", "pup", "pke"] },
+  "fc":   { category: "shoulder_health", name: "Face Pulls", alternatives: [] },
+  "pup":  { category: "pressing", name: "Push-Ups (weighted bag)", alternatives: ["bp", "wd", "pke"] },
+  "inv":  { category: "pulling", name: "Inverted Row", alternatives: ["wpu", "dbr", "iso"] },
+  "pke":  { category: "pressing", name: "Pike Push-Ups", alternatives: ["op", "bp", "wd"] },
+  "arc":  { category: "pressing", name: "Archer Push-Ups", alternatives: ["pup", "bp"] },
+  "iso":  { category: "pulling", name: "Isometric Pull", alternatives: ["wpu", "inv", "dbr"] },
+  // Full Body Power
+  "pdl":  { category: "deadlift", name: "Rack Pull Deadlift", alternatives: ["dl", "kbs"] },
+  "mbs":  { category: "explosive", name: "Medicine Ball Slam", alternatives: ["mbt", "bxj"] },
+  "kbs":  { category: "explosive", name: "Kettlebell Swing", alternatives: ["mbs", "pdl", "bxj"] },
+  "wp2":  { category: "pulling", name: "Weighted Pull-Ups", alternatives: ["wpu", "inv", "iso"] },
+  "lnd":  { category: "rotational", name: "Landmine Rotational Press", alternatives: ["mbs", "arc"] },
+  "sld":  { category: "explosive", name: "Sled Push/Pull", alternatives: ["kbs", "mbs", "mtc"] },
+  // Full Body Home
+  "bxj":  { category: "explosive", name: "Burpee Box Jump", alternatives: ["mbt", "mtc", "mbs"] },
+  "mbt":  { category: "explosive", name: "Heavy Object Throw", alternatives: ["mbs", "bxj"] },
+  "mtc":  { category: "conditioning", name: "Mountain Climbers", alternatives: ["sld", "bxj", "hit"] },
+  "bkb":  { category: "conditioning", name: "Bear Crawl", alternatives: ["mtc", "plk"] },
+  "plk":  { category: "core", name: "Plank w/ Hip Tap", alternatives: ["bkb", "iso"] },
+  // Conditioning
+  "hb":   { category: "conditioning", name: "Heavy Bag Rounds", alternatives: ["sbx", "hit"] },
+  "spr":  { category: "conditioning", name: "Sprint Intervals", alternatives: ["hit", "rcj"] },
+  "rj":   { category: "conditioning", name: "Rope Jumps", alternatives: ["rcj", "hit"] },
+  "sbx":  { category: "conditioning", name: "Shadow Boxing", alternatives: ["hb", "hit"] },
+  "hit":  { category: "conditioning", name: "HIIT Circuit", alternatives: ["hb", "spr", "sbx"] },
+  "rcj":  { category: "conditioning", name: "Rope Jump", alternatives: ["rj", "spr", "hit"] },
+};
+
+// Helper function to get similar exercises
+function getSimilarExercises(exId, currentMode, currentWorkoutKey) {
+  const exerciseMeta = EXERCISE_CATEGORIES[exId];
+  if (!exerciseMeta) return [];
+
+  const alternatives = exerciseMeta.alternatives || [];
+  const similar = [];
+
+  // Collect all alternative exercises
+  alternatives.forEach(altId => {
+    const alt = findExerciseById(altId);
+    if (alt) {
+      similar.push(alt);
+    }
+  });
+
+  return similar;
+}
+
+// Helper function to find exercise object by ID across all workouts
+function findExerciseById(exId) {
+  for (let wk of WORKOUTS) {
+    const ex = wk.gym.find(e => e.id === exId);
+    if (ex) return { ...ex, mode: 'gym', workoutKey: wk.key };
+    const homeEx = wk.home.find(e => e.id === exId);
+    if (homeEx) return { ...homeEx, mode: 'home', workoutKey: wk.key };
+  }
+  return null;
+}
