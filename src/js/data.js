@@ -137,10 +137,10 @@ function getSimilarExercises(exId, currentMode, currentWorkoutKey) {
   const alternatives = exerciseMeta.alternatives || [];
   const similar = [];
 
-  // Collect all alternative exercises
+  // Only show alternatives from the active tab to avoid mixing gym and home exercises
   alternatives.forEach(altId => {
     const alt = findExerciseById(altId);
-    if (alt) {
+    if (alt && alt.mode === currentMode) {
       similar.push(alt);
     }
   });

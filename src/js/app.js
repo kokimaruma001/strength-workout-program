@@ -1206,7 +1206,7 @@ function renderExerciseModal() {
   const alternatives = getSimilarExercises(state.modalExerciseId, state.mode, state.schedule[state.activeDay]?.key);
   
   if (alternatives.length === 0) {
-    body.innerHTML = '<p style="color: #666; text-align: center;">No alternative exercises available for this exercise.</p>';
+    body.innerHTML = '<p style="color: #666; text-align: center;">No alternative exercises available for this exercise in the current tab.</p>';
   } else {
     const listLabel = createElement('div', 'modal-section-label');
     listLabel.textContent = 'SIMILAR EXERCISES';
