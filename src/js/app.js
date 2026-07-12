@@ -34,6 +34,7 @@ function initState() {
     if (Object.keys(state.schedule).length > 0) {
       state.screen = 'tracker';
       state.activeDay = state.selectedDays[0] || Object.keys(state.schedule)[0];
+      applyPreviousWeekCarryOver();
     } else {
       state.screen = 'setup';
     }
@@ -60,6 +61,7 @@ function loginUser(userName) {
   if (Object.keys(state.schedule).length > 0) {
     state.screen = 'tracker';
     state.activeDay = state.selectedDays[0] || Object.keys(state.schedule)[0];
+    applyPreviousWeekCarryOver();
   } else {
     state.screen = 'setup';
   }
@@ -111,6 +113,7 @@ function confirmSchedule() {
   // Persist schedule to storage
   saveSelectedDays(state.selectedDays);
   saveSchedule(state.schedule);
+  applyPreviousWeekCarryOver();
   
   render();
 }
@@ -126,7 +129,7 @@ function setMode(mode) {
   render();
 }
 
-function toggleExercise(exId) {
+function toggleWorkoutExercise(exId) {
   const workout = state.schedule[state.activeDay];
   state.workoutLog = toggleExercise(state.workoutLog, exId, state.mode, workout?.key);
   saveWorkoutLog(state.workoutLog);
@@ -196,6 +199,41 @@ function undoExerciseSwap(originalExId) {
   render();
 }
 
+function applyPreviousWeekCarryOver() {
+  const currentWeekDates = getWeekDates(0);
+  const previousWeekDates = getWeekDates(-1);
+  let changed = false;
+
+  currentWeekDates.forEach((date, index) => {
+    const previousDate = previousWeekDates[index];
+    const previousEntry = state.workoutLog[previousDate];
+    if (!previousEntry) return;
+
+    const currentEntry = state.workoutLog[date] || { completed: {}, weights: {}, done: false };
+    const hasExistingData = Object.keys(currentEntry.completed || {}).length > 0 ||
+      Object.keys(currentEntry.weights || {}).length > 0 ||
+      currentEntry.done;
+
+    if (!hasExistingData) {
+      const copiedEntry = copyWorkoutEntry(previousEntry, currentEntry);
+      const shouldCopy = Object.keys(copiedEntry.completed || {}).length > 0 ||
+        Object.keys(copiedEntry.weights || {}).length > 0 ||
+        copiedEntry.done;
+
+      if (shouldCopy) {
+        state.workoutLog[date] = copiedEntry;
+        changed = true;
+      }
+    }
+  });
+
+  if (changed) {
+    saveWorkoutLog(state.workoutLog);
+  }
+
+  return changed;
+}
+
 function copyFromPreviousWeek() {
   const today = isoToday();
   const currentWeekDates = getWeekDates(0);
@@ -213,10 +251,9 @@ function copyFromPreviousWeek() {
     return;
   }
   
-  // Copy weights and completion status from previous week
   const currentEntry = state.workoutLog[today] || { completed: {}, weights: {}, done: false };
-  currentEntry.weights = JSON.parse(JSON.stringify(previousEntry.weights || {}));
-  state.workoutLog[today] = currentEntry;
+  const copiedEntry = copyWorkoutEntry(previousEntry, currentEntry);
+  state.workoutLog[today] = copiedEntry;
   
   saveWorkoutLog(state.workoutLog);
   render();
@@ -528,7 +565,7 @@ function renderTodayView() {
       
       const item = createElement('div', `exercise-item ${done ? 'completed' : ''}`);
       const header = createElement('div', 'exercise-header');
-      header.onclick = () => toggleExercise(ex.id);
+      header.onclick = () => toggleWorkoutExercise(ex.id);
       
       const checkbox = createElement('div', 'exercise-checkbox');
       checkbox.style.cursor = 'pointer';

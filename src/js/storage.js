@@ -154,6 +154,25 @@ function getTodayEntry(workoutLog) {
   return workoutLog[today] || { completed: {}, weights: {}, done: false };
 }
 
+function copyWorkoutEntry(previousEntry = {}, currentEntry = {}) {
+  const hasExistingData = Object.keys(currentEntry.completed || {}).length > 0 ||
+    Object.keys(currentEntry.weights || {}).length > 0 ||
+    currentEntry.done;
+
+  if (hasExistingData) {
+    return currentEntry;
+  }
+
+  return {
+    ...currentEntry,
+    completed: { ...(previousEntry.completed || {}) },
+    weights: previousEntry.weights ? JSON.parse(JSON.stringify(previousEntry.weights)) : {},
+    done: Boolean(previousEntry.done),
+    mode: previousEntry.mode || currentEntry.mode,
+    workoutKey: previousEntry.workoutKey || currentEntry.workoutKey,
+  };
+}
+
 // Update exercise completion
 function toggleExercise(workoutLog, exId, mode, workoutKey) {
   const today = isoToday();
