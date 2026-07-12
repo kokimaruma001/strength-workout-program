@@ -82,51 +82,52 @@ const DAILY_MOBILITY = [
 ];
 
 // ─── EXERCISE METADATA FOR ALTERNATIVES ───────────────────────────────────────
-// Map exercises to categories for finding alternatives
+// Map exercises to categories for finding alternatives. Each exercise now includes
+// four substitutes for gym mode and four for home mode.
 const EXERCISE_CATEGORIES = {
   // Lower Power
-  "sq":   { category: "squat", name: "Barbell Back Squat", alternatives: ["bs", "jp", "lp", "sl", "pdl", "kbs"] },
-  "dl":   { category: "deadlift", name: "Conventional Deadlift", alternatives: ["pdl", "sl", "rh", "hp", "kbs", "sld"] },
-  "bs":   { category: "squat", name: "Belt Squat", alternatives: ["sq", "jp", "lp", "glb", "sl"] },
-  "rh":   { category: "posterior_chain", name: "Reverse Hyperextension", alternatives: ["glb", "hp", "sl", "dl", "kbs"] },
-  "ca":   { category: "grip_tension", name: "Farmer's Walk", alternatives: ["sld", "kbs", "mbs", "lnd", "pdl"] },
-  "jp":   { category: "squat", name: "Jump Squats", alternatives: ["sq", "bs", "lp", "bxj", "mtc"] },
-  "sl":   { category: "deadlift", name: "Single-Leg RDL", alternatives: ["dl", "rh", "glb", "hp", "pdl"] },
-  "lp":   { category: "squat", name: "Lateral Lunges", alternatives: ["jp", "bs", "sl", "glb", "hp"] },
-  "glb":  { category: "posterior_chain", name: "Glute Bridge w/ Pause", alternatives: ["hp", "rh", "sl", "dl", "sld"] },
-  "hp":   { category: "posterior_chain", name: "Hip Thrust", alternatives: ["glb", "rh", "dl", "kbs", "mbs"] },
+  "sq":   { category: "squat", name: "Barbell Back Squat", alternatives: { gym: ["bs", "pdl", "lnd", "ca"], home: ["jp", "lp", "sl", "glb"] } },
+  "dl":   { category: "deadlift", name: "Conventional Deadlift", alternatives: { gym: ["pdl", "sld", "ca", "lnd"], home: ["sl", "glb", "hp", "jp"] } },
+  "bs":   { category: "squat", name: "Belt Squat", alternatives: { gym: ["sq", "pdl", "ca", "lnd"], home: ["jp", "lp", "sl", "glb"] } },
+  "rh":   { category: "posterior_chain", name: "Reverse Hyperextension", alternatives: { gym: ["ca", "sld", "pdl", "lnd"], home: ["glb", "hp", "sl", "lp"] } },
+  "ca":   { category: "grip_tension", name: "Farmer's Walk", alternatives: { gym: ["sld", "lnd", "pdl", "kbs"], home: ["mtc", "bkb", "jp", "hp"] } },
+  "jp":   { category: "squat", name: "Jump Squats", alternatives: { gym: ["sq", "bs", "pdl", "bp"], home: ["lp", "sl", "glb", "hp"] } },
+  "sl":   { category: "deadlift", name: "Single-Leg RDL", alternatives: { gym: ["dl", "pdl", "ca", "lnd"], home: ["jp", "lp", "glb", "hp"] } },
+  "lp":   { category: "squat", name: "Lateral Lunges", alternatives: { gym: ["sq", "bs", "bp", "wd"], home: ["jp", "sl", "glb", "hp"] } },
+  "glb":  { category: "posterior_chain", name: "Glute Bridge w/ Pause", alternatives: { gym: ["rh", "dl", "pdl", "ca"], home: ["hp", "sl", "jp", "lp"] } },
+  "hp":   { category: "posterior_chain", name: "Hip Thrust", alternatives: { gym: ["rh", "dl", "pdl", "ca"], home: ["glb", "sl", "jp", "lp"] } },
   // Upper Power
-  "bp":   { category: "pressing", name: "Bench Press", alternatives: ["pup", "wd", "pke", "arc", "op"] },
-  "wpu":  { category: "pulling", name: "Weighted Pull-Ups", alternatives: ["inv", "iso", "dbr", "fc", "arc"] },
-  "op":   { category: "pressing", name: "Overhead Press", alternatives: ["pke", "bp", "wd", "arc", "lnd"] },
-  "dbr":  { category: "pulling", name: "Heavy Dumbbell Row", alternatives: ["wpu", "inv", "iso", "fc", "arc"] },
-  "wd":   { category: "pressing", name: "Weighted Dips", alternatives: ["bp", "pup", "pke", "op", "arc"] },
-  "fc":   { category: "shoulder_health", name: "Face Pulls", alternatives: ["wpu", "inv", "iso", "dbr", "op"] },
-  "pup":  { category: "pressing", name: "Push-Ups (weighted bag)", alternatives: ["bp", "wd", "pke", "arc", "op"] },
-  "inv":  { category: "pulling", name: "Inverted Row", alternatives: ["wpu", "dbr", "iso", "fc", "arc"] },
-  "pke":  { category: "pressing", name: "Pike Push-Ups", alternatives: ["op", "bp", "wd", "arc", "pup"] },
-  "arc":  { category: "pressing", name: "Archer Push-Ups", alternatives: ["pup", "bp", "pke", "wd", "op"] },
-  "iso":  { category: "pulling", name: "Isometric Pull", alternatives: ["wpu", "inv", "dbr", "fc", "arc"] },
+  "bp":   { category: "pressing", name: "Bench Press", alternatives: { gym: ["wd", "op", "lnd", "ca"], home: ["pup", "pke", "arc", "inv"] } },
+  "wpu":  { category: "pulling", name: "Weighted Pull-Ups", alternatives: { gym: ["dbr", "wd", "op", "bp"], home: ["inv", "iso", "pup", "arc"] } },
+  "op":   { category: "pressing", name: "Overhead Press", alternatives: { gym: ["bp", "wd", "lnd", "ca"], home: ["pke", "arc", "pup", "iso"] } },
+  "dbr":  { category: "pulling", name: "Heavy Dumbbell Row", alternatives: { gym: ["wpu", "bp", "wd", "op"], home: ["inv", "iso", "pup", "arc"] } },
+  "wd":   { category: "pressing", name: "Weighted Dips", alternatives: { gym: ["bp", "op", "lnd", "ca"], home: ["pup", "pke", "arc", "inv"] } },
+  "fc":   { category: "shoulder_health", name: "Face Pulls", alternatives: { gym: ["op", "bp", "dbr", "wpu"], home: ["pup", "pke", "arc", "iso"] } },
+  "pup":  { category: "pressing", name: "Push-Ups (weighted bag)", alternatives: { gym: ["bp", "wd", "op", "lnd"], home: ["arc", "pke", "inv", "iso"] } },
+  "inv":  { category: "pulling", name: "Inverted Row", alternatives: { gym: ["wpu", "dbr", "bp", "wd"], home: ["pup", "arc", "pke", "iso"] } },
+  "pke":  { category: "pressing", name: "Pike Push-Ups", alternatives: { gym: ["op", "bp", "wd", "lnd"], home: ["arc", "pup", "inv", "iso"] } },
+  "arc":  { category: "pressing", name: "Archer Push-Ups", alternatives: { gym: ["bp", "op", "wd", "lnd"], home: ["pup", "pke", "inv", "iso"] } },
+  "iso":  { category: "pulling", name: "Isometric Pull", alternatives: { gym: ["wpu", "dbr", "bp", "op"], home: ["inv", "pup", "arc", "pke"] } },
   // Full Body Power
-  "pdl":  { category: "deadlift", name: "Rack Pull Deadlift", alternatives: ["dl", "kbs", "sl", "sld", "mbs"] },
-  "mbs":  { category: "explosive", name: "Medicine Ball Slam", alternatives: ["mbt", "bxj", "kbs", "lnd", "mtc"] },
-  "kbs":  { category: "explosive", name: "Kettlebell Swing", alternatives: ["mbs", "pdl", "bxj", "sld", "mbt"] },
-  "wp2":  { category: "pulling", name: "Weighted Pull-Ups", alternatives: ["wpu", "inv", "iso", "dbr", "fc"] },
-  "lnd":  { category: "rotational", name: "Landmine Rotational Press", alternatives: ["mbs", "arc", "op", "wd", "lp"] },
-  "sld":  { category: "explosive", name: "Sled Push/Pull", alternatives: ["kbs", "mbs", "mtc", "pdl", "ca"] },
+  "pdl":  { category: "deadlift", name: "Rack Pull Deadlift", alternatives: { gym: ["dl", "sq", "sld", "ca"], home: ["sl", "glb", "hp", "jp"] } },
+  "mbs":  { category: "explosive", name: "Medicine Ball Slam", alternatives: { gym: ["kbs", "sld", "lnd", "ca"], home: ["bxj", "mbt", "mtc", "bkb"] } },
+  "kbs":  { category: "explosive", name: "Kettlebell Swing", alternatives: { gym: ["mbs", "pdl", "sld", "ca"], home: ["bxj", "mbt", "mtc", "jp"] } },
+  "wp2":  { category: "pulling", name: "Weighted Pull-Ups", alternatives: { gym: ["wpu", "dbr", "bp", "op"], home: ["inv", "iso", "pup", "arc"] } },
+  "lnd":  { category: "rotational", name: "Landmine Rotational Press", alternatives: { gym: ["ca", "bp", "op", "wd"], home: ["pke", "arc", "pup", "jp"] } },
+  "sld":  { category: "explosive", name: "Sled Push/Pull", alternatives: { gym: ["ca", "kbs", "pdl", "mbs"], home: ["mtc", "bkb", "jp", "sl"] } },
   // Full Body Home
-  "bxj":  { category: "explosive", name: "Burpee Box Jump", alternatives: ["mbt", "mtc", "mbs", "kbs", "jp"] },
-  "mbt":  { category: "explosive", name: "Heavy Object Throw", alternatives: ["mbs", "bxj", "kbs", "mbs", "plk"] },
-  "mtc":  { category: "conditioning", name: "Mountain Climbers", alternatives: ["sld", "bxj", "hit", "sbx", "rcj"] },
-  "bkb":  { category: "conditioning", name: "Bear Crawl", alternatives: ["mtc", "plk", "hit", "sbx", "jp"] },
-  "plk":  { category: "core", name: "Plank w/ Hip Tap", alternatives: ["bkb", "iso", "glb", "hp", "mtc"] },
+  "bxj":  { category: "explosive", name: "Burpee Box Jump", alternatives: { gym: ["mbs", "kbs", "pdl", "ca"], home: ["mbt", "mtc", "bkb", "plk"] } },
+  "mbt":  { category: "explosive", name: "Heavy Object Throw", alternatives: { gym: ["mbs", "kbs", "pdl", "sld"], home: ["bxj", "mtc", "bkb", "plk"] } },
+  "mtc":  { category: "conditioning", name: "Mountain Climbers", alternatives: { gym: ["sld", "ca", "kbs", "mbs"], home: ["bkb", "bxj", "plk", "hit"] } },
+  "bkb":  { category: "conditioning", name: "Bear Crawl", alternatives: { gym: ["sld", "ca", "kbs", "mbs"], home: ["mtc", "bxj", "plk", "hit"] } },
+  "plk":  { category: "core", name: "Plank w/ Hip Tap", alternatives: { gym: ["ca", "sld", "mbs", "kbs"], home: ["mtc", "bkb", "bxj", "hit"] } },
   // Conditioning
-  "hb":   { category: "conditioning", name: "Heavy Bag Rounds", alternatives: ["sbx", "hit", "spr", "rcj", "mtc"] },
-  "spr":  { category: "conditioning", name: "Sprint Intervals", alternatives: ["hit", "rcj", "hb", "sbx", "mtc"] },
-  "rj":   { category: "conditioning", name: "Rope Jumps", alternatives: ["rcj", "hit", "spr", "hb", "sbx"] },
-  "sbx":  { category: "conditioning", name: "Shadow Boxing", alternatives: ["hb", "hit", "spr", "rcj", "mtc"] },
-  "hit":  { category: "conditioning", name: "HIIT Circuit", alternatives: ["hb", "spr", "sbx", "rcj", "mtc"] },
-  "rcj":  { category: "conditioning", name: "Rope Jump", alternatives: ["rj", "spr", "hit", "hb", "sbx"] },
+  "hb":   { category: "conditioning", name: "Heavy Bag Rounds", alternatives: { gym: ["spr", "rj", "sld", "ca"], home: ["sbx", "hit", "rcj", "mtc"] } },
+  "spr":  { category: "conditioning", name: "Sprint Intervals", alternatives: { gym: ["hb", "rj", "ca", "lnd"], home: ["sbx", "hit", "rcj", "mtc"] } },
+  "rj":   { category: "conditioning", name: "Rope Jumps", alternatives: { gym: ["spr", "hb", "ca", "lnd"], home: ["rcj", "sbx", "hit", "mtc"] } },
+  "sbx":  { category: "conditioning", name: "Shadow Boxing", alternatives: { gym: ["hb", "spr", "rj", "ca"], home: ["hit", "rcj", "mtc", "bkb"] } },
+  "hit":  { category: "conditioning", name: "HIIT Circuit", alternatives: { gym: ["hb", "spr", "rj", "ca"], home: ["sbx", "rcj", "mtc", "bkb"] } },
+  "rcj":  { category: "conditioning", name: "Rope Jump", alternatives: { gym: ["hb", "spr", "rj", "ca"], home: ["sbx", "hit", "mtc", "bkb"] } },
 };
 
 // Helper function to get similar exercises
@@ -134,7 +135,10 @@ function getSimilarExercises(exId, currentMode, currentWorkoutKey) {
   const exerciseMeta = EXERCISE_CATEGORIES[exId];
   if (!exerciseMeta) return [];
 
-  const alternatives = exerciseMeta.alternatives || [];
+  const alternativeMode = currentMode === 'home' ? 'home' : 'gym';
+  const alternatives = Array.isArray(exerciseMeta.alternatives)
+    ? exerciseMeta.alternatives
+    : (exerciseMeta.alternatives?.[alternativeMode] || []);
   const similar = [];
 
   // Only show alternatives from the active tab to avoid mixing gym and home exercises

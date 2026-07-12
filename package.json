@@ -5,7 +5,7 @@
   "main": "index.html",
   "scripts": {
     "start": "python -m http.server 8000",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test"
   },
   "keywords": [
     "fitness",
