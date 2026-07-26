@@ -76,6 +76,12 @@ Starting a workout session:
 4. **Mobile-Friendly**: The modal slides up from the bottom for easier mobile interaction
 5. **No Data Loss**: Even if you swap exercises or modify data, your historical data is preserved
 
+## 4. 🏠 Home Mode: KB + Medicine Ball Track
+- **Location**: TODAY tab mode toggle (Gym/Home)
+- **What changed**: Home mode now loads a full 4-protocol plan built around kettlebells, medicine balls, and bodyweight only.
+- **Protocols included**: Lower Power, Upper Power, Full Body Power, and Conditioning
+- **Notes**: Exercises show small equipment tags so it is easy to see if a movement uses KB, MB, or bodyweight, and substitutions stay within the active mode so gym and home alternatives do not mix.
+
 ## Troubleshooting
 
 **"Copy from Last Week" button doesn't appear?**

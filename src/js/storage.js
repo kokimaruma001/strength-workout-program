@@ -142,6 +142,8 @@ function clearAllData() {
     localStorage.removeItem(`ppSelectedDays_${user}`);
     localStorage.removeItem(`ppSchedule_${user}`);
     localStorage.removeItem(`ppMode_${user}`);
+    localStorage.removeItem(`ppSubstitutions_${user}`);
+    localStorage.removeItem(STORAGE_KEYS.currentUser);
     console.log(`All data cleared for user: ${user}`);
   } catch (e) {
     console.error('Error clearing data:', e);

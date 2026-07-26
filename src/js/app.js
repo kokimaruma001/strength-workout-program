@@ -361,6 +361,19 @@ function renderSetup() {
     </div>
   `;
   content.appendChild(heading);
+
+  const modeLabel = createElement('div', 'section-label');
+  modeLabel.textContent = 'MODE';
+  content.appendChild(modeLabel);
+
+  const modeToggle = createElement('div', 'mode-toggle');
+  ['gym', 'home'].forEach(m => {
+    const btn = createElement('button', `mode-btn ${state.mode === m ? 'active' : ''}`);
+    btn.textContent = m === 'gym' ? '🏋️ GYM' : '🏠 HOME';
+    btn.onclick = () => setMode(m);
+    modeToggle.appendChild(btn);
+  });
+  content.appendChild(modeToggle);
   
   const daySelector = createElement('div', 'day-selector');
   ALL_DAYS.forEach(day => {
@@ -576,9 +589,36 @@ function renderTodayView() {
       
       // Show original and substituted exercise name if different
       if (state.exerciseSubstitutions[ex.id]) {
-        name.innerHTML = `<span style="text-decoration: line-through; opacity: 0.5; font-size: 11px;">${ex.name}</span><br/>${displayEx.name} <span style="color: #c8501a; font-size: 10px;">★ ALTERNATIVE</span>`;
+        const originalLine = createElement('div');
+        originalLine.style.textDecoration = 'line-through';
+        originalLine.style.opacity = '0.5';
+        originalLine.style.fontSize = '11px';
+        originalLine.textContent = ex.name;
+        name.appendChild(originalLine);
+
+        const altLine = createElement('div');
+        altLine.style.display = 'flex';
+        altLine.style.alignItems = 'center';
+        altLine.style.gap = '8px';
+        altLine.style.flexWrap = 'wrap';
+        altLine.innerHTML = `<span>${displayEx.name}</span>`;
+        const altBadge = createElement('span', 'exercise-alt-badge');
+        altBadge.textContent = '★ ALTERNATIVE';
+        altLine.appendChild(altBadge);
+        name.appendChild(altLine);
       } else {
-        name.textContent = displayEx.name;
+        const titleLine = createElement('div');
+        titleLine.style.display = 'flex';
+        titleLine.style.alignItems = 'center';
+        titleLine.style.gap = '8px';
+        titleLine.style.flexWrap = 'wrap';
+        const titleText = createElement('span');
+        titleText.textContent = displayEx.name;
+        titleLine.appendChild(titleText);
+        const equipmentTag = createElement('span', 'exercise-equipment-tag');
+        equipmentTag.textContent = getEquipmentLabel(displayEx);
+        titleLine.appendChild(equipmentTag);
+        name.appendChild(titleLine);
       }
       
       const meta = createElement('div', 'exercise-meta');
@@ -1259,6 +1299,9 @@ function renderExerciseModal() {
       const optMeta = createElement('div', 'modal-exercise-meta');
       optMeta.innerHTML = `<span style="color: #999; font-size: 11px;">${alt.sets} • ${alt.note}</span>`;
       
+      const optEquipment = createElement('div', 'modal-exercise-equipment');
+      optEquipment.textContent = getEquipmentLabel(alt);
+      
       const optMode = createElement('div', 'modal-exercise-mode');
       optMode.textContent = `[${alt.mode === 'gym' ? '🏋️ GYM' : '🏠 HOME'}]`;
       optMode.style.color = '#c8501a';
@@ -1267,6 +1310,7 @@ function renderExerciseModal() {
       
       option.appendChild(optName);
       option.appendChild(optMeta);
+      option.appendChild(optEquipment);
       option.appendChild(optMode);
       
       option.onclick = () => swapExercise(state.modalExerciseId, alt.id);

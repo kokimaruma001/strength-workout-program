@@ -528,6 +528,26 @@ input[type="time"] {
     color: #e8e4dc;
 }
 
+.exercise-equipment-tag,
+.exercise-alt-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 7px;
+    border-radius: 999px;
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    background: #1a0a00;
+    color: #c8501a;
+    border: 1px solid #3a1800;
+}
+
+.exercise-alt-badge {
+    background: #0d1a0d;
+    color: #4CAF50;
+    border-color: #2a4a2a;
+}
+
 .exercise-item.completed .exercise-name {
     text-decoration: line-through;
     color: #555;
@@ -1863,6 +1883,14 @@ input[type="time"] {
     font-size: 11px;
     color: #666;
     margin-top: 4px;
+}
+
+.modal-exercise-equipment {
+    font-size: 10px;
+    color: #c8501a;
+    margin-top: 4px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
 }
 
 .modal-exercise-mode {

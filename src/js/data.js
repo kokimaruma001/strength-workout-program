@@ -10,11 +10,11 @@ const WORKOUTS = [
       { id: "ca",  name: "Farmer's Walk",             sets: "4x20m",  note: "Grip & full body tension",        weighted: true },
     ],
     home: [
-      { id: "jp",  name: "Jump Squats",               sets: "4x10",   note: "Explosive power",                 weighted: false },
-      { id: "sl",  name: "Single-Leg RDL",            sets: "3x10ea", note: "Use bag/backpack for load",       weighted: true },
-      { id: "lp",  name: "Lateral Lunges",            sets: "3x12ea", note: "Hip mobility + strength",         weighted: false },
-      { id: "glb", name: "Glute Bridge w/ Pause",     sets: "4x15",   note: "3 sec hold at top",               weighted: false },
-      { id: "hp",  name: "Hip Thrust",                sets: "3x20",   note: "Drive through heels",             weighted: false },
+      { id: "jp",  name: "Goblet Squat",                sets: "4x10",   note: "KB-held squat pattern — brace and drive", weighted: true,  equipment: "🏋️ KB" },
+      { id: "sl",  name: "KB Romanian Deadlift",        sets: "3x8",    note: "Hinge with controlled tempo",            weighted: true,  equipment: "🏋️ KB" },
+      { id: "lp",  name: "Bulgarian Split Squat (KB-loaded)", sets: "3x10ea", note: "Single-leg strength + balance",          weighted: true,  equipment: "🏋️ KB" },
+      { id: "glb", name: "KB Swing",                    sets: "4x15",   note: "Hip hinge power and tempo",              weighted: true,  equipment: "🏋️ KB" },
+      { id: "hp",  name: "MB Squat-to-Press",          sets: "3x8",    note: "Explosive squat + overhead transfer",    weighted: true,  equipment: "🟠 MB" },
     ],
   },
   {
@@ -28,11 +28,11 @@ const WORKOUTS = [
       { id: "fc",  name: "Face Pulls",                sets: "3x20",   note: "Shoulder health",                 weighted: false },
     ],
     home: [
-      { id: "pup", name: "Push-Ups (weighted bag)",   sets: "4x15",   note: "Slow negative 3 sec",             weighted: false },
-      { id: "inv", name: "Inverted Row",              sets: "4x12",   note: "Feet elevated for harder",        weighted: false },
-      { id: "pke", name: "Pike Push-Ups",             sets: "3x12",   note: "OHP substitute",                  weighted: false },
-      { id: "arc", name: "Archer Push-Ups",           sets: "3x8ea",  note: "Single arm progression",          weighted: false },
-      { id: "iso", name: "Isometric Pull",            sets: "3x30s",  note: "Towel on door — back activation", weighted: false },
+      { id: "pup", name: "KB Floor Press",             sets: "4x8",    note: "Strong pressing without rack",         weighted: true,  equipment: "🏋️ KB" },
+      { id: "inv", name: "KB/MB Push-Up Variation",   sets: "3x12",   note: "Push-up with MB on back or KB on chest", weighted: false, equipment: "🏋️ KB + 🟠 MB" },
+      { id: "pke", name: "Pike Push-Up",               sets: "3x10",   note: "Shoulder strength and overhead pressing pattern", weighted: false, equipment: "🧍 Bodyweight" },
+      { id: "arc", name: "Single-Arm KB Overhead Press", sets: "3x8ea", note: "Strict unilateral press for shoulders", weighted: true, equipment: "🏋️ KB" },
+      { id: "iso", name: "KB Renegade Row",            sets: "3x8ea",  note: "Anti-rotation row under load",         weighted: true,  equipment: "🏋️ KB" },
     ],
   },
   {
@@ -46,11 +46,11 @@ const WORKOUTS = [
       { id: "sld", name: "Sled Push/Pull",            sets: "4x20m",  note: "Conditioning + leg drive",        weighted: true },
     ],
     home: [
-      { id: "bxj", name: "Burpee Box Jump",           sets: "4x6",    note: "Max explosion",                   weighted: false },
-      { id: "mbt", name: "Heavy Object Throw",        sets: "4x10",   note: "Use any heavy object",            weighted: false },
-      { id: "mtc", name: "Mountain Climbers",         sets: "4x30s",  note: "Combat conditioning",             weighted: false },
-      { id: "bkb", name: "Bear Crawl",                sets: "4x10m",  note: "Full body coordination",          weighted: false },
-      { id: "plk", name: "Plank w/ Hip Tap",          sets: "3x20ea", note: "Core bracing for grappling",      weighted: false },
+      { id: "bxj", name: "KB Clean & Press",          sets: "4x6ea",  note: "Explosive full-body transfer",        weighted: true,  equipment: "🏋️ KB" },
+      { id: "mbt", name: "KB Snatch",                 sets: "4x6ea",  note: "Power and coordination through the hips", weighted: true, equipment: "🏋️ KB" },
+      { id: "mtc", name: "MB Full-Body Slam",         sets: "4x8",    note: "Explosive throw with force transfer", weighted: true,  equipment: "🟠 MB" },
+      { id: "bkb", name: "Turkish Get-Up",            sets: "3x5ea",  note: "Control, stability, and shoulder strength", weighted: true, equipment: "🏋️ KB" },
+      { id: "plk", name: "KB Thruster",               sets: "3x8",    note: "Squat to press under one load",       weighted: true,  equipment: "🏋️ KB" },
     ],
   },
   {
@@ -61,9 +61,9 @@ const WORKOUTS = [
       { id: "rj",  name: "Rope Jumps",                sets: "5x2min", note: "Footwork & conditioning",         weighted: false },
     ],
     home: [
-      { id: "sbx", name: "Shadow Boxing",             sets: "5x3min", note: "Stay light on feet",              weighted: false },
-      { id: "hit", name: "HIIT Circuit",              sets: "4 rounds", note: "45s on / 15s off",              weighted: false },
-      { id: "rcj", name: "Rope Jump",                 sets: "5x2min", note: "Footwork",                        weighted: false },
+      { id: "sbx", name: "Sprint/Shuttle Finisher",   sets: "6x20s",  note: "Bodyweight conditioning with quick feet", weighted: false, equipment: "🧍 Bodyweight" },
+      { id: "hit", name: "KB Swing Intervals",        sets: "8x20s",  note: "High-output hip hinge conditioning",     weighted: true,  equipment: "🏋️ KB" },
+      { id: "rcj", name: "MB Slam Intervals",         sets: "6x10",   note: "Fast MB slams for power endurance",      weighted: true,  equipment: "🟠 MB" },
     ],
   },
 ];
@@ -130,6 +130,15 @@ const EXERCISE_CATEGORIES = {
   "hit":  { category: "conditioning", name: "HIIT Circuit", alternatives: { gym: ["hb", "spr", "rj", "ca"], home: ["sbx", "rcj", "mtc", "bkb"] } },
   "rcj":  { category: "conditioning", name: "Rope Jump", alternatives: { gym: ["hb", "spr", "rj", "ca"], home: ["sbx", "hit", "mtc", "bkb"] } },
 };
+
+function getEquipmentLabel(exercise) {
+  if (!exercise) return '🧍 Bodyweight';
+  if (exercise.equipment) return exercise.equipment;
+  const name = String(exercise.name || '').toLowerCase();
+  if (name.includes('medicine ball') || name.includes('med ball') || name.includes('mb')) return '🟠 MB';
+  if (name.includes('kettlebell') || name.includes('kb')) return '🏋️ KB';
+  return '🧍 Bodyweight';
+}
 
 const EXTRA_ALTERNATIVES = {
   sq: { gym: [{ id: "sq-front-squat", name: "Front Squat", sets: "4x6", note: "Barbell front rack squat", weighted: true }, { id: "sq-safety-bar-squat", name: "Safety Bar Squat", sets: "3x8", note: "More torso-friendly squat variation", weighted: true }, { id: "sq-zercher-squat", name: "Zercher Squat", sets: "3x8", note: "Front-loaded squat for core tension", weighted: true }], home: [{ id: "sq-front-squat", name: "Front Squat", sets: "4x6", note: "Barbell front rack squat", weighted: true }, { id: "sq-safety-bar-squat", name: "Safety Bar Squat", sets: "3x8", note: "More torso-friendly squat variation", weighted: true }, { id: "sq-zercher-squat", name: "Zercher Squat", sets: "3x8", note: "Front-loaded squat for core tension", weighted: true }] },
