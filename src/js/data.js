@@ -215,7 +215,7 @@ function getSimilarExercises(exId, currentMode, currentWorkoutKey) {
   return similar;
 }
 
-// Helper function to find exercise object by ID across all workouts
+// Helper function to find exercise object by ID across all workouts and extra alternatives
 function findExerciseById(exId) {
   for (let wk of WORKOUTS) {
     const ex = wk.gym.find(e => e.id === exId);
@@ -223,5 +223,19 @@ function findExerciseById(exId) {
     const homeEx = wk.home.find(e => e.id === exId);
     if (homeEx) return { ...homeEx, mode: 'home', workoutKey: wk.key };
   }
+
+  // Search extra alternative definitions for custom IDs not in WORKOUTS
+  for (const baseExId in EXTRA_ALTERNATIVES) {
+    const altSets = EXTRA_ALTERNATIVES[baseExId];
+    if (altSets?.gym) {
+      const alt = altSets.gym.find(e => e.id === exId);
+      if (alt) return { ...alt, mode: 'gym', workoutKey: null };
+    }
+    if (altSets?.home) {
+      const alt = altSets.home.find(e => e.id === exId);
+      if (alt) return { ...alt, mode: 'home', workoutKey: null };
+    }
+  }
+
   return null;
 }
