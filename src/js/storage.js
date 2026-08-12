@@ -121,6 +121,14 @@ function saveSelectedDays(days) {
   saveState('ppSelectedDays', days);
 }
 
+function getScheduleWeekDate() {
+  return loadState('ppScheduleWeekDate', null);
+}
+
+function saveScheduleWeekDate(dateStr) {
+  saveState('ppScheduleWeekDate', dateStr);
+}
+
 function saveSchedule(schedule) {
   saveState('ppSchedule', schedule);
 }
@@ -140,6 +148,7 @@ function clearAllData() {
     localStorage.removeItem(`ppLog_${user}`);
     localStorage.removeItem(`ppMobility_${user}`);
     localStorage.removeItem(`ppSelectedDays_${user}`);
+    localStorage.removeItem(`ppScheduleWeekDate_${user}`);
     localStorage.removeItem(`ppSchedule_${user}`);
     localStorage.removeItem(`ppMode_${user}`);
     localStorage.removeItem(`ppSubstitutions_${user}`);

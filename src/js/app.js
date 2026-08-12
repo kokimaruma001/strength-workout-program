@@ -5,6 +5,7 @@ let state = {
   currentUser: null,
   selectedDays: [],
   schedule: {},
+  scheduleWeekDate: null,
   activeDay: null,
   mode: 'gym',  // gym | home
   showMobility: false,
@@ -27,11 +28,12 @@ function initState() {
     state.mobilityLog = getMobilityLog();
     state.selectedDays = getSelectedDays();
     state.schedule = getSchedule();
+    state.scheduleWeekDate = getScheduleWeekDate();
     state.mode = getMode();
     state.exerciseSubstitutions = getExerciseSubstitutions();
     
-    // If user has a saved schedule, skip setup screen
-    if (Object.keys(state.schedule).length > 0) {
+    const scheduleReset = maybeResetWeeklySchedule();
+    if (!scheduleReset && Object.keys(state.schedule).length > 0) {
       state.screen = 'tracker';
       state.activeDay = state.selectedDays[0] || Object.keys(state.schedule)[0];
       applyPreviousWeekCarryOver();
@@ -54,11 +56,12 @@ function loginUser(userName) {
   state.mobilityLog = getMobilityLog();
   state.selectedDays = getSelectedDays();
   state.schedule = getSchedule();
+  state.scheduleWeekDate = getScheduleWeekDate();
   state.mode = getMode();
   state.exerciseSubstitutions = getExerciseSubstitutions();
   
-  // If user has a saved schedule, skip setup screen
-  if (Object.keys(state.schedule).length > 0) {
+  const scheduleReset = maybeResetWeeklySchedule();
+  if (!scheduleReset && Object.keys(state.schedule).length > 0) {
     state.screen = 'tracker';
     state.activeDay = state.selectedDays[0] || Object.keys(state.schedule)[0];
     applyPreviousWeekCarryOver();
@@ -108,10 +111,12 @@ function confirmSchedule() {
   const sorted = ALL_DAYS.filter(d => state.selectedDays.includes(d));
   state.schedule = buildSchedule(sorted);
   state.activeDay = sorted[0];
+  state.scheduleWeekDate = getCurrentSunday();
   state.screen = 'tracker';
   
   // Persist schedule to storage
   saveSelectedDays(state.selectedDays);
+  saveScheduleWeekDate(state.scheduleWeekDate);
   saveSchedule(state.schedule);
   applyPreviousWeekCarryOver();
   
@@ -127,6 +132,38 @@ function setMode(mode) {
   state.mode = mode;
   saveMode(mode);
   render();
+}
+
+function hasWorkoutProgress(date) {
+  const entry = state.workoutLog[date];
+  if (!entry) return false;
+  if (Object.values(entry.completed || {}).some(Boolean)) return true;
+  if (Object.values(entry.weights || {}).some(w => w && (w.kg || w.reps))) return true;
+  return !!entry.done;
+}
+
+function maybeResetWeeklySchedule() {
+  const currentSunday = getCurrentSunday();
+  const savedWeekDate = state.scheduleWeekDate;
+
+  if (Object.keys(state.schedule).length === 0) {
+    return false;
+  }
+
+  if (savedWeekDate !== currentSunday) {
+    state.selectedDays = [];
+    state.schedule = {};
+    state.activeDay = null;
+    state.scheduleWeekDate = null;
+    state.exerciseSubstitutions = {};
+    saveSelectedDays(state.selectedDays);
+    saveSchedule(state.schedule);
+    saveScheduleWeekDate(null);
+    saveExerciseSubstitutions(state.exerciseSubstitutions);
+    return true;
+  }
+
+  return false;
 }
 
 function toggleWorkoutExercise(exId) {
@@ -358,6 +395,7 @@ function renderSetup() {
     <div style="font-size: 17px; font-weight: 900; margin-bottom: 4px;">CHOOSE YOUR DAYS</div>
     <div style="font-size: 12px; color: #555; margin-bottom: 20px; line-height: 1.7;">
       Pick 2–4 days you're available. Workouts map in order: Lower → Upper → Full Body → Conditioning.
+      Every Sunday the schedule resets, so select your exercise days for the new week.
     </div>
   `;
   content.appendChild(heading);
@@ -806,20 +844,20 @@ function renderWeekView() {
   // Session dots - CLICKABLE
   const dotsCard = createElement('div', 'card');
   const dotsLabel = createElement('div', 'section-label');
-  const workedDates = weekDates.filter(d => state.workoutLog[d]?.done);
-  dotsLabel.innerHTML = `SESSIONS THIS WEEK — ${workedDates.length} / ${Object.keys(state.schedule).length}`;
+  const workedDates = weekDates.filter(hasWorkoutProgress);
+  dotsLabel.innerHTML = `WORKOUT DAYS THIS WEEK — ${workedDates.length} / ${Object.keys(state.schedule).length}`;
   dotsCard.appendChild(dotsLabel);
   
   const datesContainer = createElement('div', 'week-dates');
   weekDates.forEach((date, i) => {
-    const done = state.workoutLog[date]?.done;
+    const progress = hasWorkoutProgress(date);
     const isToday = date === isoToday();
     const dateDiv = createElement('div', 'week-date clickable');
     dateDiv.style.cursor = 'pointer';
     dateDiv.onclick = () => setDetailDay(date);
     dateDiv.innerHTML = `
       <div class="week-day ${isToday ? 'today' : ''}">${dayNames[i]}</div>
-      <div class="week-dot ${done ? 'done' : ''} ${isToday ? 'today' : ''}">${done ? '✓' : ''}</div>
+      <div class="week-dot ${progress ? 'done' : ''} ${isToday ? 'today' : ''}">${progress ? '✓' : ''}</div>
       <div class="week-date-num">${new Date(date).getDate()}</div>
     `;
     dateDiv.onmouseover = () => dateDiv.style.opacity = '0.7';
@@ -895,8 +933,8 @@ function renderWeekView() {
   
   // Render chart after content is appended
   setTimeout(() => {
-    const data = weekDates.map(d => state.workoutLog[d]?.done ? 1 : 0);
-    createBarChart('weekChart', dayNames, data, 'Sessions');
+    const data = weekDates.map(d => hasWorkoutProgress(d) ? 1 : 0);
+    createBarChart('weekChart', dayNames, data, 'Workouts');
   }, 0);
   
   return fragment;
@@ -952,7 +990,7 @@ function renderMonthView() {
     const d = new Date(year, month, i + 1);
     return d.toISOString().slice(0, 10);
   });
-  const workedDates = allDates.filter(d => state.workoutLog[d]?.done);
+  const workedDates = allDates.filter(hasWorkoutProgress);
   const totalSessions = workedDates.length;
   
   const statsRow = createElement('div', 'stats-row');
@@ -994,9 +1032,9 @@ function renderMonthView() {
     if (!date) {
       grid.appendChild(createElement('div'));
     } else {
-      const done = state.workoutLog[date]?.done;
+      const progress = hasWorkoutProgress(date);
       const isToday = date === isoToday();
-      const cell = createElement('div', `calendar-cell ${done ? 'done' : ''} ${isToday ? 'today' : ''} clickable`);
+      const cell = createElement('div', `calendar-cell ${progress ? 'done' : ''} ${isToday ? 'today' : ''} clickable`);
       cell.style.cursor = 'pointer';
       cell.textContent = new Date(date).getDate();
       cell.onclick = () => setDetailDay(date);
@@ -1021,7 +1059,7 @@ function renderMonthView() {
     allDates.forEach(d => {
       const wk = getWeekKey(new Date(d));
       if (!weeks[wk]) weeks[wk] = { label: `W${Object.keys(weeks).length + 1}`, sessions: 0 };
-      if (state.workoutLog[d]?.done) weeks[wk].sessions++;
+      if (hasWorkoutProgress(d)) weeks[wk].sessions++;
     });
     return Object.values(weeks);
   })();
@@ -1088,7 +1126,7 @@ function renderDayDetailView() {
   const dayLog = state.workoutLog[state.detailDay];
   const isToday = state.detailDay === isoToday();
   
-  if (!dayLog || !dayLog.done) {
+  if (!dayLog || !hasWorkoutProgress(state.detailDay)) {
     const noData = createElement('div', 'card');
     noData.style.textAlign = 'center';
     noData.style.padding = '30px 14px';

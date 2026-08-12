@@ -91,3 +91,10 @@ function getMonthInfo(offset = 0) {
     monthName: MONTHS[d.getMonth()],
   };
 }
+
+function getCurrentSunday() {
+  const now = new Date();
+  now.setHours(0,0,0,0);
+  now.setDate(now.getDate() - now.getDay());
+  return now.toISOString().slice(0,10);
+}
