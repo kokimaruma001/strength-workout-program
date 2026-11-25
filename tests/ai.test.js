@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const { sanitizeRecommendations } = require('../server');
+const { createRecommendation, getProviderConfiguration, parseRecommendationJson, sanitizeRecommendations } = require('../server');
 
 const aiSource = fs.readFileSync(path.join(__dirname, '..', 'src', 'js', 'ai.js'), 'utf8');
 const context = { Date, Set, Map, Number, String, Array, Object, fetch() {} };
@@ -72,4 +72,60 @@ test('AI substitutions are limited to supplied candidates in the active mode', (
   assert.equal(result.progression.length, 1);
   assert.equal(result.alternatives.length, 1);
   assert.equal(result.alternatives[0].name, 'Split Squat');
+});
+
+test('Anthropic key selects its Messages API and parses JSON text content', async () => {
+  const payload = {
+    workout: { key: 'lower' },
+    mode: 'home',
+    exercises: [{ id: 'sq' }],
+    candidates: [{ id: 'sq', mode: 'home' }],
+    history: [],
+  };
+  const answer = { summary: 'Start conservatively.', progression: [], alternatives: [] };
+  let requestedUrl;
+  let requestedOptions;
+
+  const result = await createRecommendation(payload, {
+    ANTHROPIC_API_KEY: 'test-anthropic-key',
+    ANTHROPIC_MODEL: 'test-model',
+  }, async (url, options) => {
+    requestedUrl = url;
+    requestedOptions = options;
+    return {
+      ok: true,
+      json: async () => ({ content: [{ type: 'text', text: JSON.stringify(answer) }] }),
+    };
+  });
+
+  assert.equal(requestedUrl, 'https://api.anthropic.com/v1/messages');
+  assert.equal(requestedOptions.headers['x-api-key'], 'test-anthropic-key');
+  assert.equal(JSON.parse(requestedOptions.body).model, 'test-model');
+  assert.deepEqual(result, answer);
+});
+
+test('Anthropic authentication failures explain which server setting to check', async () => {
+  const payload = { workout: {}, mode: 'gym', exercises: [], candidates: [], history: [] };
+  await assert.rejects(
+    createRecommendation(payload, { ANTHROPIC_API_KEY: 'invalid-test-key' }, async () => ({ ok: false, status: 401 })),
+    error => error.status === 502 && /Authentication failed with anthropic/.test(error.message),
+  );
+  assert.equal(getProviderConfiguration({ ANTHROPIC_API_KEY: 'a', OPENAI_API_KEY: 'o' }).provider, 'anthropic');
+});
+
+test('recommendation response parser accepts fenced and prefaced JSON', () => {
+  const expected = { summary: 'Steady progress.', progression: [], alternatives: [] };
+  assert.deepEqual(parseRecommendationJson(`\`\`\`json\n${JSON.stringify(expected)}\n\`\`\``), expected);
+  assert.deepEqual(parseRecommendationJson(`Here is the plan:\n${JSON.stringify(expected)}\nDone.`), expected);
+});
+
+test('token-limited provider response reports truncation instead of unreadable JSON', async () => {
+  const payload = { workout: {}, mode: 'gym', exercises: [], candidates: [], history: [] };
+  await assert.rejects(
+    createRecommendation(payload, { ANTHROPIC_API_KEY: 'test-key' }, async () => ({
+      ok: true,
+      json: async () => ({ stop_reason: 'max_tokens', content: [{ type: 'text', text: '{"summary":' }] }),
+    })),
+    error => error.message === 'The AI response was cut off. Try again.',
+  );
 });

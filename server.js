@@ -14,6 +14,7 @@ const MIME_TYPES = {
   '.json': 'application/json; charset=utf-8',
   '.svg': 'image/svg+xml',
 };
+const RECOMMENDATION_SYSTEM_PROMPT = 'You are a conservative strength-training assistant. Use only the supplied workout and training history. Progress load and total work gradually based on recorded completion, kilograms, reps, and estimated volume; never invent missing performance data or recommend a large jump. If history is sparse, say so and give a cautious next-session target. Suggest equipment substitutions only from the supplied candidates, keep the same movement purpose, same gym/home mode, and avoid every unavailable item. Return JSON with keys summary (string), progression (array of {exerciseId, recommendation, rationale}), and alternatives (array of {originalExerciseId, alternativeId, rationale}). Do not diagnose injuries or prescribe through pain; advise stopping and seeking qualified help if pain is reported.';
 
 function sendJson(response, status, data) {
   response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -77,55 +78,156 @@ function sanitizeRecommendations(raw, payload) {
   };
 }
 
-async function createRecommendation(payload) {
-  if (!process.env.OPENAI_API_KEY) {
-    throw Object.assign(new Error('AI suggestions are not configured. Set OPENAI_API_KEY and restart the app.'), { status: 503 });
+function getProviderConfiguration(env = process.env) {
+  if (env.ANTHROPIC_API_KEY) {
+    return {
+      provider: 'anthropic',
+      apiKey: env.ANTHROPIC_API_KEY,
+      model: env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001',
+    };
   }
+  if (env.OPENAI_API_KEY) {
+    return {
+      provider: 'openai',
+      apiKey: env.OPENAI_API_KEY,
+      model: env.OPENAI_MODEL || 'gpt-4o-mini',
+    };
+  }
+  throw Object.assign(new Error('AI suggestions are not configured. Set ANTHROPIC_API_KEY or OPENAI_API_KEY and restart the app.'), { status: 503 });
+}
+
+function providerError(status, provider) {
+  if (status === 401) {
+    return `Authentication failed with ${provider}. Verify the API key for that provider and restart the app.`;
+  }
+  if (status === 403) {
+    return `${provider} denied access. Check that the account can use the configured model.`;
+  }
+  if (status === 404) {
+    return `${provider} could not find the configured model. Check the model name in the server environment.`;
+  }
+  if (status === 429) {
+    return `${provider} is rate-limiting requests or the account has insufficient quota. Check the provider account and try again.`;
+  }
+  return `${provider} returned an error (HTTP ${status}). Check the server configuration and try again.`;
+}
+
+function parseRecommendationJson(content) {
+  const text = content.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+  try {
+    return JSON.parse(text);
+  } catch {
+    const start = text.indexOf('{');
+    if (start < 0) throw new Error('No JSON object found.');
+
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    for (let index = start; index < text.length; index += 1) {
+      const character = text[index];
+      if (inString) {
+        if (escaped) escaped = false;
+        else if (character === '\\') escaped = true;
+        else if (character === '"') inString = false;
+        continue;
+      }
+      if (character === '"') inString = true;
+      else if (character === '{') depth += 1;
+      else if (character === '}') {
+        depth -= 1;
+        if (depth === 0) return JSON.parse(text.slice(start, index + 1));
+      }
+    }
+    throw new Error('Incomplete JSON object.');
+  }
+}
+
+async function createRecommendation(payload, env = process.env, fetchImpl = fetch) {
   if (!payload || !payload.workout || !['gym', 'home'].includes(payload.mode) ||
       !Array.isArray(payload.exercises) || !Array.isArray(payload.candidates) ||
       !Array.isArray(payload.history)) {
     throw Object.assign(new Error('Workout recommendation data is incomplete.'), { status: 400 });
   }
 
-  const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
-  const providerResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+  const config = getProviderConfiguration(env);
+  const anthropic = config.provider === 'anthropic';
+  const endpoint = anthropic
+    ? 'https://api.anthropic.com/v1/messages'
+    : 'https://api.openai.com/v1/chat/completions';
+  const headers = anthropic
+    ? {
+      'x-api-key': config.apiKey,
+      'anthropic-version': '2023-06-01',
       'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model,
+    }
+    : {
+      Authorization: `Bearer ${config.apiKey}`,
+      'Content-Type': 'application/json',
+    };
+  const requestBody = anthropic
+    ? {
+      model: config.model,
+      max_tokens: 2200,
+      temperature: 0.3,
+      system: `${RECOMMENDATION_SYSTEM_PROMPT} Return only valid JSON with no markdown fences.`,
+      messages: [{ role: 'user', content: JSON.stringify(payload) }],
+    }
+    : {
+      model: config.model,
       response_format: { type: 'json_object' },
       temperature: 0.3,
-      max_tokens: 1200,
+      max_tokens: 2200,
       messages: [
-        {
-          role: 'system',
-          content: 'You are a conservative strength-training assistant. Use only the supplied workout and training history. Progress load and total work gradually based on recorded completion, kilograms, reps, and estimated volume; never invent missing performance data or recommend a large jump. If history is sparse, say so and give a cautious next-session target. Suggest equipment substitutions only from the supplied candidates, keep the same movement purpose, same gym/home mode, and avoid every unavailable item. Return JSON with keys summary (string), progression (array of {exerciseId, recommendation, rationale}), and alternatives (array of {originalExerciseId, alternativeId, rationale}). Do not diagnose injuries or prescribe through pain; advise stopping and seeking qualified help if pain is reported.',
-        },
+        { role: 'system', content: RECOMMENDATION_SYSTEM_PROMPT },
         { role: 'user', content: JSON.stringify(payload) },
       ],
-    }),
-  });
+    };
+
+  let providerResponse;
+  try {
+    providerResponse = await fetchImpl(endpoint, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(requestBody),
+    });
+  } catch {
+    throw Object.assign(new Error(`Could not connect to ${config.provider}. Check the server network connection and try again.`), { status: 502 });
+  }
 
   if (!providerResponse.ok) {
     const status = providerResponse.status === 429 ? 429 : 502;
-    throw Object.assign(new Error(status === 429
-      ? 'The AI provider is rate-limiting requests. Try again shortly.'
-      : 'The AI provider could not complete this request. Check the server configuration and try again.'), { status });
+    throw Object.assign(new Error(providerError(providerResponse.status, config.provider)), { status });
   }
 
-  const providerData = await providerResponse.json();
-  const content = providerData.choices?.[0]?.message?.content;
+  let providerData;
+  try {
+    providerData = await providerResponse.json();
+  } catch {
+    throw Object.assign(new Error(`${config.provider} returned an invalid response. Try again shortly.`), { status: 502 });
+  }
+  const content = anthropic
+    ? providerData.content?.find(block => block.type === 'text')?.text
+    : providerData.choices?.[0]?.message?.content;
   if (typeof content !== 'string') {
-    throw Object.assign(new Error('The AI provider returned an unreadable response.'), { status: 502 });
+    const stopReason = anthropic ? providerData.stop_reason : providerData.choices?.[0]?.finish_reason;
+    const message = stopReason === 'max_tokens' || stopReason === 'length'
+      ? 'The AI response was cut off. Try again.'
+      : `${config.provider} returned no text for the recommendation. Try again.`;
+    throw Object.assign(new Error(message), { status: 502 });
   }
   try {
-    return sanitizeRecommendations(JSON.parse(content), payload);
+    const recommendations = parseRecommendationJson(content);
+    if (!recommendations || typeof recommendations !== 'object' || Array.isArray(recommendations)) {
+      throw new Error('Expected a JSON object.');
+    }
+    return sanitizeRecommendations(recommendations, payload);
   } catch (error) {
     if (error.status) throw error;
-    throw Object.assign(new Error('The AI provider returned an unreadable response.'), { status: 502 });
+    const stopReason = anthropic ? providerData.stop_reason : providerData.choices?.[0]?.finish_reason;
+    const message = stopReason === 'max_tokens' || stopReason === 'length'
+      ? 'The AI response was cut off. Try again.'
+      : `${config.provider} returned a response that was not valid JSON. Try again.`;
+    throw Object.assign(new Error(message), { status: 502 });
   }
 }
 
@@ -224,4 +326,11 @@ if (require.main === module) {
     });
 }
 
-module.exports = { createServer, listenOnAvailablePort, sanitizeRecommendations };
+module.exports = {
+  createRecommendation,
+  createServer,
+  getProviderConfiguration,
+  listenOnAvailablePort,
+  parseRecommendationJson,
+  sanitizeRecommendations,
+};

@@ -49,14 +49,15 @@ strength-workout-program/
 Simply open `index.html` in any modern web browser. No build step required!
 
 ### Run the App and AI Suggestions
-The AI endpoint runs in the Node server so the provider key is not exposed to browser code. Use Node.js 18 or newer, set an OpenAI API key in your terminal, and start the app:
+The AI endpoint runs in the Node server so the provider key is not exposed to browser code. Use Node.js 18 or newer, set the API key for your provider in the terminal, and start the app. Anthropic is selected when both provider keys are present:
 
 ```powershell
-$env:OPENAI_API_KEY = "your-api-key"
+$env:ANTHROPIC_API_KEY = "your-anthropic-api-key"
+$env:ANTHROPIC_MODEL = "claude-haiku-4-5-20251001"
 npm start
 ```
 
-Open the URL printed at startup (normally `http://localhost:8000`; if that port is occupied, the server selects the next available port). The AI feature sends the active workout, up to eight weeks of matching logged load/reps, and substitute exercise options to OpenAI only when you request suggestions. The browser continues to store workout data locally. Set `OPENAI_MODEL` to choose another compatible model; the default is `gpt-4o-mini`.
+For OpenAI, use `OPENAI_API_KEY` and optionally `OPENAI_MODEL` (default `gpt-4o-mini`). For Anthropic, use `ANTHROPIC_API_KEY` and optionally `ANTHROPIC_MODEL`. Open the URL printed at startup (normally `http://localhost:8000`; if that port is occupied, the server selects the next available port). The AI feature sends the active workout, up to eight weeks of matching logged load/reps, and substitute exercise options to your configured provider only when you request suggestions. The browser continues to store workout data locally.
 
 Do not deploy the API server publicly without adding authentication and request rate limits. The default server binds to localhost.
 
@@ -83,11 +84,11 @@ To run without the AI server, you can still open `index.html` directly, but AI s
 
 ## Data Storage
 
-All data is stored locally in your browser's localStorage:
+Workout data is stored locally in your browser's localStorage:
 - `ppLog`: Workout log with completed exercises and weights
 - `ppMobility`: Daily mobility tracking
 
-No data is sent to any server. Everything stays on your device!
+When you request AI suggestions, the active workout, up to eight weeks of matching logged load/reps, and substitute exercise options are sent through the local Node server to the configured AI provider. The API key remains on the server and is not sent to the browser. Without requesting suggestions, workout data stays in browser storage.
 
 ## Customization
 
