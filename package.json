@@ -4,7 +4,7 @@
   "description": "A comprehensive workout tracking application with strength programming, analytics, and mobility routines",
   "main": "index.html",
   "scripts": {
-    "start": "python -m http.server 8000",
+    "start": "node server.js",
     "test": "node --test"
   },
   "keywords": [
@@ -15,7 +15,7 @@
     "mma",
     "athletics"
   ],
-  "author": "Your Name",
+  "author": "Koketso Maruma",
   "license": "MIT",
   "devDependencies": {
     "http-server": "^14.1.1"

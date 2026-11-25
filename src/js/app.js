@@ -17,6 +17,10 @@ let state = {
   viewMonthOffset: 0,  // 0 = current month, -1 = last month, +1 = next month
   showExerciseModal: false,  // For showing alternative exercise selector
   modalExerciseId: null,  // Exercise ID for which we're selecting alternatives
+  unavailableEquipment: '',
+  aiSuggestions: null,
+  aiLoading: false,
+  aiError: '',
 };
 
 // ─── INIT STATE ──────────────────────────────────────────────────────────────
@@ -125,13 +129,53 @@ function confirmSchedule() {
 
 function setActiveDay(day) {
   state.activeDay = day;
+  state.aiSuggestions = null;
+  state.aiError = '';
   render();
 }
 
 function setMode(mode) {
   state.mode = mode;
+  state.aiSuggestions = null;
   saveMode(mode);
   render();
+}
+
+async function generateWorkoutRecommendations() {
+  const workout = state.schedule[state.activeDay];
+  if (!workout || state.aiLoading) return;
+
+  const exercises = state.mode === 'gym' ? workout.gym : workout.home;
+  const candidates = new Map();
+  exercises.forEach(exercise => candidates.set(exercise.id, { ...exercise, mode: state.mode }));
+  exercises.forEach(exercise => {
+    getSimilarExercises(exercise.id, state.mode, workout.key).forEach(alternative => {
+      candidates.set(alternative.id, alternative);
+    });
+  });
+
+  const payload = buildWorkoutRecommendationPayload({
+    workout,
+    mode: state.mode,
+    workoutLog: state.workoutLog,
+    unavailableEquipment: state.unavailableEquipment,
+    exercises,
+    candidates: Array.from(candidates.values()),
+    equipmentLabel: getEquipmentLabel,
+  });
+
+  state.aiLoading = true;
+  state.aiError = '';
+  render();
+  try {
+    state.aiSuggestions = await requestWorkoutRecommendations(payload);
+  } catch (error) {
+    state.aiSuggestions = null;
+    state.aiError = error.message || 'Could not load suggestions. Please try again.';
+  } finally {
+    state.aiLoading = false;
+    render();
+  }
 }
 
 function hasWorkoutProgress(date) {
@@ -226,6 +270,8 @@ function closeExerciseModal() {
 
 function swapExercise(originalExId, newExId) {
   state.exerciseSubstitutions[originalExId] = newExId;
+  state.aiSuggestions = null;
+  state.aiError = '';
   saveExerciseSubstitutions(state.exerciseSubstitutions);
   closeExerciseModal();
 }
@@ -739,6 +785,86 @@ function renderTodayView() {
       exerciseList.appendChild(item);
     });
     content.appendChild(exerciseList);
+
+    const aiCard = createElement('section', 'card ai-recommendations');
+    const aiHeader = createElement('div', 'section-label');
+    aiHeader.textContent = 'SMART TRAINING SUGGESTIONS';
+    aiCard.appendChild(aiHeader);
+    const aiDescription = createElement('p', 'ai-description');
+    aiDescription.textContent = 'Review your recent training loads for measured progression ideas and equipment-aware substitutions.';
+    aiCard.appendChild(aiDescription);
+
+    const unavailableLabel = createElement('label', 'ai-input-label');
+    unavailableLabel.textContent = 'Equipment unavailable today';
+    const unavailableInput = createElement('input', 'ai-equipment-input');
+    unavailableInput.type = 'text';
+    unavailableInput.placeholder = 'e.g. squat rack, kettlebell';
+    unavailableInput.value = state.unavailableEquipment;
+    unavailableInput.maxLength = 300;
+    unavailableInput.oninput = event => { state.unavailableEquipment = event.target.value; };
+    unavailableLabel.appendChild(unavailableInput);
+    aiCard.appendChild(unavailableLabel);
+
+    const aiButton = createElement('button', 'btn-primary ai-generate');
+    aiButton.textContent = state.aiLoading ? 'ANALYZING TRAINING LOG...' : 'GET SMART SUGGESTIONS';
+    aiButton.disabled = state.aiLoading;
+    aiButton.onclick = generateWorkoutRecommendations;
+    aiCard.appendChild(aiButton);
+
+    if (state.aiError) {
+      const error = createElement('p', 'ai-error');
+      error.textContent = state.aiError;
+      aiCard.appendChild(error);
+    }
+
+    if (state.aiSuggestions) {
+      const summary = createElement('p', 'ai-summary');
+      summary.textContent = state.aiSuggestions.summary;
+      aiCard.appendChild(summary);
+
+      const progressionTitle = createElement('div', 'ai-result-heading');
+      progressionTitle.textContent = 'LOAD & WORK PROGRESSION';
+      aiCard.appendChild(progressionTitle);
+      const progressionList = createElement('div', 'ai-result-list');
+      state.aiSuggestions.progression.forEach(item => {
+        const row = createElement('div', 'ai-result-row');
+        const exercise = exercises.find(candidate => candidate.id === item.exerciseId);
+        const title = createElement('strong');
+        title.textContent = exercise?.name || 'Workout movement';
+        const recommendation = createElement('p');
+        recommendation.textContent = item.recommendation;
+        const rationale = createElement('p', 'ai-rationale');
+        rationale.textContent = item.rationale;
+        row.append(title, recommendation, rationale);
+        progressionList.appendChild(row);
+      });
+      aiCard.appendChild(progressionList);
+
+      if (state.aiSuggestions.alternatives.length) {
+        const alternativesTitle = createElement('div', 'ai-result-heading');
+        alternativesTitle.textContent = 'EQUIPMENT ALTERNATIVES';
+        aiCard.appendChild(alternativesTitle);
+        const alternativesList = createElement('div', 'ai-result-list');
+        state.aiSuggestions.alternatives.forEach(item => {
+          const row = createElement('div', 'ai-result-row');
+          const original = exercises.find(candidate => candidate.id === item.originalExerciseId);
+          const title = createElement('strong');
+          title.textContent = `${original?.name || 'Movement'} → ${item.name}`;
+          const details = createElement('p');
+          details.textContent = `${item.sets} · ${item.equipment}`;
+          const rationale = createElement('p', 'ai-rationale');
+          rationale.textContent = item.rationale;
+          const applyButton = createElement('button', 'btn-small ai-apply');
+          applyButton.textContent = 'USE THIS ALTERNATIVE';
+          applyButton.onclick = () => swapExercise(item.originalExerciseId, item.alternativeId);
+          row.append(title, details, rationale, applyButton);
+          alternativesList.appendChild(row);
+        });
+        aiCard.appendChild(alternativesList);
+      }
+    }
+
+    content.appendChild(aiCard);
     
     // Mobility section
     const mobilitySection = createElement('div', 'mobility-section');

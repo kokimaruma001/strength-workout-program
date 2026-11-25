@@ -20,6 +20,7 @@ A comprehensive workout tracking application with strength programming, analytic
 - 🧘 **Daily Mobility**: Built-in stretching and mobility routine
 - ⏰ **Workout Reminders**: Set custom reminder times
 - 💾 **Local Data Storage**: All data saved to browser localStorage
+- 🤖 **AI Training Suggestions**: Load progression ideas based on recent logged work, with alternatives for unavailable equipment
 
 ## Project Structure
 
@@ -47,21 +48,19 @@ strength-workout-program/
 ### Option 1: Direct Browser Access
 Simply open `index.html` in any modern web browser. No build step required!
 
-### Option 2: Local Server
-For development, use a local server to avoid CORS issues:
+### Run the App and AI Suggestions
+The AI endpoint runs in the Node server so the provider key is not exposed to browser code. Use Node.js 18 or newer, set an OpenAI API key in your terminal, and start the app:
 
-```bash
-# Using Python 3
-python -m http.server 8000
-
-# Using Python 2
-python -m SimpleHTTPServer 8000
-
-# Using Node.js (http-server)
-npx http-server
+```powershell
+$env:OPENAI_API_KEY = "your-api-key"
+npm start
 ```
 
-Then visit `http://localhost:8000`
+Open the URL printed at startup (normally `http://localhost:8000`; if that port is occupied, the server selects the next available port). The AI feature sends the active workout, up to eight weeks of matching logged load/reps, and substitute exercise options to OpenAI only when you request suggestions. The browser continues to store workout data locally. Set `OPENAI_MODEL` to choose another compatible model; the default is `gpt-4o-mini`.
+
+Do not deploy the API server publicly without adding authentication and request rate limits. The default server binds to localhost.
+
+To run without the AI server, you can still open `index.html` directly, but AI suggestions require the Node server and API key above.
 
 ## Usage
 
