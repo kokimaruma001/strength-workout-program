@@ -21,6 +21,8 @@ let state = {
   aiSuggestions: null,
   aiLoading: false,
   aiError: '',
+  aiProvider: 'anthropic',
+  aiApiKey: '',
 };
 
 // ─── INIT STATE ──────────────────────────────────────────────────────────────
@@ -50,10 +52,12 @@ function initState() {
 }
 
 // ─── STATE UPDATES ───────────────────────────────────────────────────────────
-function loginUser(userName) {
+function loginUser(userName, aiProvider = 'anthropic', aiApiKey = '') {
   const cleanName = userName.trim();
   if (!cleanName) return;
   
+  state.aiProvider = aiProvider === 'openai' ? 'openai' : 'anthropic';
+  state.aiApiKey = String(aiApiKey || '').trim();
   setCurrentUser(cleanName);
   state.currentUser = cleanName;
   state.workoutLog = getWorkoutLog();
@@ -79,6 +83,8 @@ function loginUser(userName) {
 function logoutUser() {
   state.currentUser = null;
   state.screen = 'login';
+  state.aiApiKey = '';
+  state.aiProvider = 'anthropic';
   state.selectedDays = [];
   state.schedule = {};
   state.workoutLog = {};
@@ -168,7 +174,10 @@ async function generateWorkoutRecommendations() {
   state.aiError = '';
   render();
   try {
-    state.aiSuggestions = await requestWorkoutRecommendations(payload);
+    state.aiSuggestions = await requestWorkoutRecommendations(payload, {
+      provider: state.aiProvider,
+      apiKey: state.aiApiKey,
+    });
   } catch (error) {
     state.aiSuggestions = null;
     state.aiError = error.message || 'Could not load suggestions. Please try again.';
@@ -381,8 +390,10 @@ function renderLogin() {
   const form = createElement('form', 'login-form');
   form.onsubmit = (e) => {
     e.preventDefault();
-    const input = form.querySelector('input');
-    loginUser(input.value);
+    const nameInput = form.querySelector('.name-input');
+    const providerInput = form.querySelector('.api-provider-select');
+    const apiKeyInput = form.querySelector('.api-key-input');
+    loginUser(nameInput.value, providerInput.value, apiKeyInput.value);
   };
   
   const inputWrapper = createElement('div', 'input-wrapper');
@@ -394,6 +405,32 @@ function renderLogin() {
   input.autofocus = true;
   inputWrapper.appendChild(input);
   form.appendChild(inputWrapper);
+
+  const apiKeySection = createElement('div', 'login-api-key-section');
+  const apiKeyHeading = createElement('label', 'login-api-key-label');
+  apiKeyHeading.textContent = 'AI provider key (optional)';
+  const providerSelect = createElement('select', 'api-provider-select');
+  providerSelect.setAttribute('aria-label', 'AI provider');
+  [['anthropic', 'Anthropic'], ['openai', 'OpenAI']].forEach(([value, label]) => {
+    const option = createElement('option');
+    option.value = value;
+    option.textContent = label;
+    providerSelect.appendChild(option);
+  });
+  const apiKeyInput = createElement('input', 'api-key-input');
+  apiKeyInput.type = 'password';
+  apiKeyInput.placeholder = 'Paste your provider API key';
+  apiKeyInput.autocomplete = 'off';
+  apiKeyInput.spellcheck = false;
+  apiKeyInput.maxLength = 500;
+  apiKeyInput.setAttribute('aria-label', 'AI provider API key');
+  apiKeyHeading.appendChild(providerSelect);
+  apiKeySection.appendChild(apiKeyHeading);
+  apiKeySection.appendChild(apiKeyInput);
+  const apiKeyNote = createElement('p', 'login-api-key-note');
+  apiKeyNote.textContent = 'Used only for AI requests during this session. It is not saved; without a key, the app uses its server configuration.';
+  apiKeySection.appendChild(apiKeyNote);
+  form.appendChild(apiKeySection);
   
   const btn = createElement('button', 'btn-primary');
   btn.type = 'submit';
@@ -412,7 +449,7 @@ function renderLogin() {
     existingUsers.forEach(user => {
       const userBtn = createElement('button', 'user-btn');
       userBtn.textContent = user;
-      userBtn.onclick = () => loginUser(user);
+      userBtn.onclick = () => loginUser(user, providerSelect.value, apiKeyInput.value);
       userList.appendChild(userBtn);
     });
     content.appendChild(userList);

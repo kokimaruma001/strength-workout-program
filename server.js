@@ -104,7 +104,22 @@ function sanitizeRecommendations(raw, payload) {
   };
 }
 
-function getProviderConfiguration(env = process.env) {
+function getProviderConfiguration(env = process.env, userCredentials = null) {
+  if (userCredentials?.apiKey) {
+    if (!['anthropic', 'openai'].includes(userCredentials.provider) ||
+        typeof userCredentials.apiKey !== 'string' || userCredentials.apiKey.length > 500 ||
+        /[\r\n]/.test(userCredentials.apiKey)) {
+      throw Object.assign(new Error('The login API key or provider selection is invalid.'), { status: 400 });
+    }
+    const anthropic = userCredentials.provider === 'anthropic';
+    return {
+      provider: userCredentials.provider,
+      apiKey: userCredentials.apiKey,
+      model: anthropic
+        ? env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001'
+        : env.OPENAI_MODEL || 'gpt-4o-mini',
+    };
+  }
   if (env.ANTHROPIC_API_KEY) {
     return {
       provider: 'anthropic',
@@ -168,14 +183,14 @@ function parseRecommendationJson(content) {
   }
 }
 
-async function createRecommendation(payload, env = process.env, fetchImpl = fetch) {
+async function createRecommendation(payload, env = process.env, fetchImpl = fetch, userCredentials = null) {
   if (!payload || !payload.workout || !['gym', 'home'].includes(payload.mode) ||
       !Array.isArray(payload.exercises) || !Array.isArray(payload.candidates) ||
       !Array.isArray(payload.history)) {
     throw Object.assign(new Error('Workout recommendation data is incomplete.'), { status: 400 });
   }
 
-  const config = getProviderConfiguration(env);
+  const config = getProviderConfiguration(env, userCredentials);
   const anthropic = config.provider === 'anthropic';
   const endpoint = anthropic
     ? 'https://api.anthropic.com/v1/messages'
@@ -319,7 +334,10 @@ function createServer() {
 
     try {
       const payload = await readJsonBody(request);
-      sendJson(response, 200, await createRecommendation(payload));
+      const apiKey = request.headers['x-ai-api-key'];
+      const provider = request.headers['x-ai-provider'];
+      const userCredentials = apiKey ? { provider, apiKey } : null;
+      sendJson(response, 200, await createRecommendation(payload, process.env, fetch, userCredentials));
     } catch (error) {
       sendJson(response, error.status || 502, { error: error.message || 'Recommendation request failed.' });
     }

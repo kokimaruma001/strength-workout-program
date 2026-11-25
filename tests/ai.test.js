@@ -105,6 +105,45 @@ test('Anthropic key selects its Messages API and parses JSON text content', asyn
   assert.deepEqual(result, answer);
 });
 
+test('login provider key overrides server key and is not included in the workout body', async () => {
+  const payload = {
+    workout: { key: 'lower' },
+    mode: 'home',
+    exercises: [{ id: 'sq' }],
+    candidates: [{ id: 'sq', mode: 'home' }],
+    history: [],
+  };
+  let requestOptions;
+  await createRecommendation(payload, { ANTHROPIC_API_KEY: 'server-key' }, async (url, options) => {
+    requestOptions = options;
+    return {
+      ok: true,
+      json: async () => ({ choices: [{ message: { content: '{"summary":"OK","progression":[],"alternatives":[]}' } }] }),
+    };
+  }, { provider: 'openai', apiKey: 'login-key' });
+
+  assert.equal(requestOptions.headers.Authorization, 'Bearer login-key');
+  assert.equal(JSON.parse(requestOptions.body).model, 'gpt-4o-mini');
+  assert.equal(JSON.stringify(JSON.parse(requestOptions.body)).includes('login-key'), false);
+});
+
+test('browser recommendation request sends the user key in headers, not JSON', async () => {
+  let requestOptions;
+  context.fetch = async (url, options) => {
+    requestOptions = options;
+    return { ok: true, json: async () => ({ summary: 'OK', progression: [], alternatives: [] }) };
+  };
+
+  await context.requestWorkoutRecommendations({ workout: { key: 'lower' } }, {
+    provider: 'anthropic',
+    apiKey: 'masked-test-key',
+  });
+
+  assert.equal(requestOptions.headers['x-ai-provider'], 'anthropic');
+  assert.equal(requestOptions.headers['x-ai-api-key'], 'masked-test-key');
+  assert.equal(requestOptions.body.includes('masked-test-key'), false);
+});
+
 test('Anthropic authentication failures explain which server setting to check', async () => {
   const payload = { workout: {}, mode: 'gym', exercises: [], candidates: [], history: [] };
   await assert.rejects(

@@ -49,7 +49,7 @@ strength-workout-program/
 Simply open `index.html` in any modern web browser. No build step required!
 
 ### Run the App and AI Suggestions
-The AI endpoint runs in the Node server so the provider key is not exposed to browser code. Use Node.js 18 or newer. Copy `.env.example` to `.env`, replace the placeholder with your newly generated provider key, save, then run `npm start`. The server loads `.env` automatically. Anthropic is selected when both provider keys are present:
+The AI endpoint runs in the Node server. Use Node.js 18 or newer and run `npm start`. At login, optionally choose Anthropic or OpenAI and enter your provider key; it is held in page memory for that session, sent only to the local server in a request header, and cleared when you log out or reload. If no login key is provided, the server uses its `.env` configuration instead. Anthropic is selected when both server keys are present:
 
 ```text
 ANTHROPIC_API_KEY=your-new-anthropic-api-key

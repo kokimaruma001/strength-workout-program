@@ -63,10 +63,15 @@ function buildWorkoutRecommendationPayload({
   };
 }
 
-async function requestWorkoutRecommendations(payload) {
+async function requestWorkoutRecommendations(payload, credentials = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (credentials.apiKey) {
+    headers['x-ai-provider'] = credentials.provider;
+    headers['x-ai-api-key'] = credentials.apiKey;
+  }
   const response = await fetch('/api/recommendations', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(payload),
   });
   const result = await response.json().catch(() => ({}));
