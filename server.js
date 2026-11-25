@@ -1,8 +1,10 @@
 const fs = require('node:fs/promises');
+const fsSync = require('node:fs');
 const http = require('node:http');
 const path = require('node:path');
 
 const ROOT = __dirname;
+loadDotEnv();
 const PORT = Number(process.env.PORT) || 8000;
 const HOST = process.env.HOST || '127.0.0.1';
 const MAX_PORT_ATTEMPTS = 100;
@@ -15,6 +17,30 @@ const MIME_TYPES = {
   '.svg': 'image/svg+xml',
 };
 const RECOMMENDATION_SYSTEM_PROMPT = 'You are a conservative strength-training assistant. Use only the supplied workout and training history. Progress load and total work gradually based on recorded completion, kilograms, reps, and estimated volume; never invent missing performance data or recommend a large jump. If history is sparse, say so and give a cautious next-session target. Suggest equipment substitutions only from the supplied candidates, keep the same movement purpose, same gym/home mode, and avoid every unavailable item. Return JSON with keys summary (string), progression (array of {exerciseId, recommendation, rationale}), and alternatives (array of {originalExerciseId, alternativeId, rationale}). Do not diagnose injuries or prescribe through pain; advise stopping and seeking qualified help if pain is reported.';
+
+function loadDotEnv(env = process.env, filePath = path.join(ROOT, '.env')) {
+  let contents;
+  try {
+    contents = fsSync.readFileSync(filePath, 'utf8');
+  } catch (error) {
+    if (error.code === 'ENOENT') return false;
+    throw error;
+  }
+
+  contents.split(/\r?\n/).forEach(line => {
+    const match = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
+    if (!match || Object.prototype.hasOwnProperty.call(env, match[1])) return;
+    let value = match[2];
+    if ((value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    } else {
+      value = value.replace(/\s+#.*$/, '').trim();
+    }
+    env[match[1]] = value;
+  });
+  return true;
+}
 
 function sendJson(response, status, data) {
   response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -246,6 +272,11 @@ async function serveStatic(request, response, pathname) {
     response.end();
     return;
   }
+  if (relativePath.split('/').some(segment => segment.startsWith('.'))) {
+    response.writeHead(404);
+    response.end();
+    return;
+  }
   const filePath = path.resolve(ROOT, `.${relativePath}`);
   if (filePath !== ROOT && !filePath.startsWith(`${ROOT}${path.sep}`)) {
     response.writeHead(403);
@@ -330,6 +361,7 @@ module.exports = {
   createRecommendation,
   createServer,
   getProviderConfiguration,
+  loadDotEnv,
   listenOnAvailablePort,
   parseRecommendationJson,
   sanitizeRecommendations,

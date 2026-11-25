@@ -1,9 +1,10 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const http = require('node:http');
 const path = require('node:path');
 const vm = require('node:vm');
-const { createRecommendation, getProviderConfiguration, parseRecommendationJson, sanitizeRecommendations } = require('../server');
+const { createRecommendation, createServer, getProviderConfiguration, loadDotEnv, parseRecommendationJson, sanitizeRecommendations } = require('../server');
 
 const aiSource = fs.readFileSync(path.join(__dirname, '..', 'src', 'js', 'ai.js'), 'utf8');
 const context = { Date, Set, Map, Number, String, Array, Object, fetch() {} };
@@ -128,4 +129,37 @@ test('token-limited provider response reports truncation instead of unreadable J
     })),
     error => error.message === 'The AI response was cut off. Try again.',
   );
+});
+
+test('dotenv loader fills missing values without overriding the current environment', () => {
+  const os = require('node:os');
+  const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'strength-program-env-'));
+  const envFile = path.join(temporaryDirectory, '.env');
+  const environment = { KEEP_EXISTING: 'from-process' };
+  try {
+    fs.writeFileSync(envFile, 'ANTHROPIC_API_KEY="local-secret-value"\nMODEL=haiku # comment\nKEEP_EXISTING=file-value\n');
+    assert.equal(loadDotEnv(environment, envFile), true);
+    assert.equal(environment.ANTHROPIC_API_KEY, 'local-secret-value');
+    assert.equal(environment.MODEL, 'haiku');
+    assert.equal(environment.KEEP_EXISTING, 'from-process');
+  } finally {
+    fs.rmSync(temporaryDirectory, { recursive: true, force: true });
+  }
+});
+
+test('static server does not serve dotenv or other dotfiles', async () => {
+  const server = createServer();
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const port = server.address().port;
+    const status = await new Promise((resolve, reject) => {
+      http.get(`http://127.0.0.1:${port}/.env.example`, response => {
+        response.resume();
+        response.on('end', () => resolve(response.statusCode));
+      }).on('error', reject);
+    });
+    assert.equal(status, 404);
+  } finally {
+    await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+  }
 });

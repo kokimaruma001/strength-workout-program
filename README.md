@@ -49,11 +49,23 @@ strength-workout-program/
 Simply open `index.html` in any modern web browser. No build step required!
 
 ### Run the App and AI Suggestions
-The AI endpoint runs in the Node server so the provider key is not exposed to browser code. Use Node.js 18 or newer, set the API key for your provider in the terminal, and start the app. Anthropic is selected when both provider keys are present:
+The AI endpoint runs in the Node server so the provider key is not exposed to browser code. Use Node.js 18 or newer. Copy `.env.example` to `.env`, replace the placeholder with your newly generated provider key, save, then run `npm start`. The server loads `.env` automatically. Anthropic is selected when both provider keys are present:
+
+```text
+ANTHROPIC_API_KEY=your-new-anthropic-api-key
+ANTHROPIC_MODEL=claude-haiku-4-5-20251001
+```
+
+On Windows, copy the example using:
 
 ```powershell
-$env:ANTHROPIC_API_KEY = "your-anthropic-api-key"
-$env:ANTHROPIC_MODEL = "claude-haiku-4-5-20251001"
+Copy-Item .env.example .env
+notepad .env
+```
+
+Then start the app:
+
+```powershell
 npm start
 ```
 
